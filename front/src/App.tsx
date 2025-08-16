@@ -125,16 +125,16 @@ function App() {
     vibrate([200, 100, 300])
     setIsAnimating(true)
 
-    // 生成随机红包数据
-    const amounts = [8.88, 18.88, 66.66, 88.88, 168.88, 888.88]
+    // 生成随机红包数据 - Neo-brutalism风格
+    const amounts = [10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0]
     const messages = [
-      '恭喜发财',
-      '新年快乐',
-      '万事如意',
-      '心想事成',
-      '财源滚滚',
+      'HODL STRONG',
+      'TO THE MOON',
+      'DIAMOND HANDS',
+      'WAGMI',
+      'LFG!',
     ]
-    const senders = ['神秘好友', 'Monad社区', '区块链大佬', '加密朋友']
+    const senders = ['CRYPTO WHALE', 'MONAD LABS', 'WEB3 BUILDER', 'DEFI DEGEN']
 
     const newRedPacket: RedPacketData = {
       amount: amounts[Math.floor(Math.random() * amounts.length)],
@@ -227,19 +227,18 @@ function App() {
               isAnimating ? 'animate-out' : 'animate-in'
             }`}>
             <div className='floating-icon'>
-              <div className='red-packet-icon'>🧧</div>
-              <div className='glow-effect'></div>
+              <div className='red-packet-icon'>🎁</div>
             </div>
 
-            <h1 className='title gradient-text'>发现红包！</h1>
+            <h1 className='title gradient-text'>MONAD 红包</h1>
 
-            <p className='subtitle'>有人给你发了一个Monad红包</p>
+            <p className='subtitle'>WEB3 LUCKY MONEY AWAITS</p>
 
             <button
               className='primary-button pulse-animation'
               onClick={discoverRedPacket}
               disabled={isAnimating}>
-              <span>点击查看</span>
+              <span>CLAIM NOW</span>
               <div className='button-glow'></div>
             </button>
           </div>
@@ -253,10 +252,10 @@ function App() {
             }`}>
             <div className='red-packet-card'>
               <div className='card-header'>
-                <div className='sender-avatar'>👤</div>
+                <div className='sender-avatar'>🤖</div>
                 <div className='sender-info'>
-                  <h3>神秘好友</h3>
-                  <p>给你发了红包</p>
+                  <h3>MONAD COMMUNITY</h3>
+                  <p>SENT YOU A GIFT</p>
                 </div>
               </div>
 
@@ -264,20 +263,20 @@ function App() {
                 <div className='red-packet-3d'>
                   <div className='packet-front'>
                     <div className='golden-pattern'></div>
-                    <div className='packet-symbol'>福</div>
+                    <div className='packet-symbol'>💎</div>
                   </div>
                   <div className='packet-shadow'></div>
                 </div>
               </div>
 
-              <div className='packet-message'>恭喜发财，大吉大利！</div>
+              <div className='packet-message'>FORTUNE AWAITS THE BRAVE!</div>
             </div>
 
             <button
               className='secondary-button'
               onClick={receiveRedPacket}
               disabled={isAnimating}>
-              领取红包
+              RECEIVE GIFT
             </button>
           </div>
         )}
@@ -289,7 +288,7 @@ function App() {
               isAnimating ? 'animate-out' : 'animate-in'
             }`}>
             <div className='open-instruction'>
-              <h2>轻触红包拆开</h2>
+              <h2>TAP TO OPEN</h2>
               <div className='touch-hint'>👇</div>
             </div>
 
@@ -301,13 +300,13 @@ function App() {
                   <div className='packet-glow'></div>
                   <div className='packet-body'>
                     <div className='golden-decoration'></div>
-                    <div className='packet-text'>开</div>
+                    <div className='packet-text'>OPEN</div>
                     <div className='sparkles'>
                       {Array.from({ length: 8 }).map((_, i) => (
                         <div
                           key={i}
                           className={`sparkle sparkle-${i + 1}`}>
-                          ✨
+                          ⚡
                         </div>
                       ))}
                     </div>
@@ -316,7 +315,7 @@ function App() {
               </div>
             </div>
 
-            <p className='hint-text'>点击红包即可拆开</p>
+            <p className='hint-text'>CLICK TO REVEAL YOUR PRIZE</p>
           </div>
         )}
 
@@ -327,26 +326,26 @@ function App() {
               isAnimating ? 'animate-out' : 'animate-in'
             }`}>
             <div className='result-celebration'>
-              <div className='success-icon'>🎉</div>
-              <h1 className='congratulations'>恭喜发财！</h1>
+              <div className='success-icon'>💰</div>
+              <h1 className='congratulations'>JACKPOT!</h1>
             </div>
 
             <div className='amount-display'>
-              <div className='currency-symbol'>¥</div>
+              <div className='currency-symbol'>$</div>
               <div className='amount-value'>{redPacket.amount}</div>
             </div>
 
             <div className='result-details'>
               <div className='detail-item'>
-                <span className='label'>来自:</span>
+                <span className='label'>FROM:</span>
                 <span className='value'>{redPacket.sender}</span>
               </div>
               <div className='detail-item'>
-                <span className='label'>祝福:</span>
+                <span className='label'>MESSAGE:</span>
                 <span className='value'>{redPacket.message}</span>
               </div>
               <div className='detail-item'>
-                <span className='label'>时间:</span>
+                <span className='label'>TIME:</span>
                 <span className='value'>{redPacket.timestamp}</span>
               </div>
             </div>
@@ -355,9 +354,9 @@ function App() {
               <button
                 className='primary-button'
                 onClick={restart}>
-                再抢一个
+                CLAIM ANOTHER
               </button>
-              <button className='outline-button'>分享好运</button>
+              <button className='outline-button'>SHARE LUCK</button>
             </div>
           </div>
         )}
