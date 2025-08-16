@@ -11,15 +11,13 @@ extra_output = ["storageLayout"]
 fs_permissions = [{ access = "read-write", path = "./" }]
 gas_reports = ["*"]
 via_ir = true
+evm_version = "cancun"
 
-metadata = true
-metadata_hash = "none"     # disable ipfs
-use_literal_content = true # use source code
+[rpc_endpoints]
+sepolia = "${SEPOLIA_RPC_URL}"
 
-# https://docs.monad.xyz/developer-essentials/network-information
-# Monad Testnet Configuration
-eth-rpc-url = "https://testnet-rpc.monad.xyz"
-chain_id = 10143
+[etherscan]
+sepolia = { key = "${ETHERSCAN_API_KEY}" }
 
 [profile.ci.fuzz]
 runs = 10_000
