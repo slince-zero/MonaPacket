@@ -199,7 +199,7 @@ function App() {
         params: [address, 'latest']
       })
       const balanceInEth = parseInt(balance, 16) / Math.pow(10, 18)
-      console.log('💎 账户余额:', balanceInEth.toFixed(4), 'ETH')
+      console.log('💎 账户余额:', balanceInEth.toFixed(4), 'MONAD')
       return balanceInEth.toFixed(4)
     } catch (error) {
       console.error('❌ 获取余额失败:', error)
@@ -594,7 +594,7 @@ function App() {
                 </div>
                 <div className='wallet-info-item'>
                   <span className='label'>BALANCE:</span>
-                  <span className='value'>{walletState.balance} ETH</span>
+                  <span className='value'>{walletState.balance} MONAD</span>
                 </div>
               </div>
             )}
