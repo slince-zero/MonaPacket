@@ -1,3 +1,12 @@
 {
-  "cSpell.words": ["chainid", "IERC", "ipfs", "keccak", "mload", "MPKT", "reci"]
+  "cSpell.words": [
+    "chainid",
+    "IERC",
+    "ipfs",
+    "keccak",
+    "mload",
+    "MONAPACKET",
+    "MPKT",
+    "reci"
+  ]
 }
