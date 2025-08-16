@@ -1,6 +1,13 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 
+// 扩展Window接口以支持ethereum
+declare global {
+  interface Window {
+    ethereum?: any
+  }
+}
+
 interface RedPacketData {
   amount: number
   message: string
@@ -8,9 +15,30 @@ interface RedPacketData {
   timestamp: string
 }
 
+interface WalletState {
+  isConnected: boolean
+  address: string
+  chainId: string
+  balance: string
+  networkName: string
+}
+
+// Monad网络配置
+const MONAD_NETWORK = {
+  chainId: '0x15B3', // 5555 in hex
+  chainName: 'Monad Testnet',
+  nativeCurrency: {
+    name: 'MON',
+    symbol: 'MON',
+    decimals: 18,
+  },
+  rpcUrls: ['https://testnet-rpc.monad.xyz'],
+  blockExplorerUrls: ['https://testnet-explorer.monad.xyz'],
+}
+
 function App() {
-  const [step, setStep] = useState<'discover' | 'receive' | 'open' | 'result'>(
-    'discover'
+  const [step, setStep] = useState<'wallet' | 'discover' | 'receive' | 'open' | 'result'>(
+    'wallet'
   )
   const [redPacket, setRedPacket] = useState<RedPacketData | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
@@ -18,10 +46,25 @@ function App() {
     Array<{ id: number; x: number; y: number }>
   >([])
   const [soundEnabled, setSoundEnabled] = useState(true)
+  const [walletState, setWalletState] = useState<WalletState>({
+    isConnected: false,
+    address: '',
+    chainId: '',
+    balance: '',
+    networkName: ''
+  })
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [walletError, setWalletError] = useState<string>('')
 
-  // 初始化音效
+  // 初始化音效和钱包检查
   useEffect(() => {
     initSoundEffects()
+    checkWalletConnection()
+    setupWalletEventListeners()
+
+    return () => {
+      removeWalletEventListeners()
+    }
   }, [])
 
   // 简单的音效系统
@@ -95,6 +138,281 @@ function App() {
     if ('vibrate' in navigator) {
       navigator.vibrate(pattern)
     }
+  }
+
+  // 钱包相关函数
+  const checkWalletConnection = async () => {
+    console.log('🔍 检查钱包连接状态...')
+
+    if (typeof window.ethereum === 'undefined') {
+      console.log('❌ 未检测到MetaMask')
+      setWalletError('请安装MetaMask钱包')
+      return
+    }
+
+    console.log('✅ 检测到MetaMask')
+
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' })
+      console.log('📊 账户信息:', accounts)
+
+      if (accounts.length > 0) {
+        const address = accounts[0]
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' })
+        const balance = await getBalance(address)
+        const networkName = getNetworkName(chainId)
+
+        const newWalletState = {
+          isConnected: true,
+          address,
+          chainId,
+          balance,
+          networkName
+        }
+
+        setWalletState(newWalletState)
+        console.log('💰 钱包状态:', newWalletState)
+
+        // 如果已连接钱包，直接进入红包页面
+        setStep('discover')
+      } else {
+        console.log('⚠️ 钱包未连接')
+        setWalletState({
+          isConnected: false,
+          address: '',
+          chainId: '',
+          balance: '',
+          networkName: ''
+        })
+      }
+    } catch (error) {
+      console.error('❌ 检查钱包连接失败:', error)
+      setWalletError('检查钱包连接失败')
+    }
+  }
+
+  // 获取余额
+  const getBalance = async (address: string): Promise<string> => {
+    try {
+      const balance = await window.ethereum.request({
+        method: 'eth_getBalance',
+        params: [address, 'latest']
+      })
+      const balanceInEth = parseInt(balance, 16) / Math.pow(10, 18)
+      console.log('💎 账户余额:', balanceInEth.toFixed(4), 'ETH')
+      return balanceInEth.toFixed(4)
+    } catch (error) {
+      console.error('❌ 获取余额失败:', error)
+      return '0.0000'
+    }
+  }
+
+  // 获取网络名称
+  const getNetworkName = (chainId: string): string => {
+    const networks: { [key: string]: string } = {
+      '0x1': 'Ethereum Mainnet',
+      '0x5': 'Goerli Testnet',
+      '0x89': 'Polygon Mainnet',
+      '0x38': 'BSC Mainnet',
+      '0x15B3': 'Monad Testnet',
+    }
+    const networkName = networks[chainId] || `Unknown Network (${chainId})`
+    console.log('🌐 当前网络:', networkName)
+    return networkName
+  }
+
+  // 连接钱包
+  const connectWallet = async () => {
+    console.log('🔗 开始连接钱包...')
+
+    if (typeof window.ethereum === 'undefined') {
+      console.log('❌ 未检测到MetaMask')
+      setWalletError('请安装MetaMask钱包')
+      return
+    }
+
+    setIsConnecting(true)
+    setWalletError('')
+
+    try {
+      console.log('📞 请求账户访问权限...')
+      const accounts = await window.ethereum.request({
+        method: 'eth_requestAccounts',
+      })
+
+      if (accounts.length > 0) {
+        console.log('✅ 账户连接成功:', accounts[0])
+
+        const address = accounts[0]
+        const chainId = await window.ethereum.request({ method: 'eth_chainId' })
+        const balance = await getBalance(address)
+        const networkName = getNetworkName(chainId)
+
+        const newWalletState = {
+          isConnected: true,
+          address,
+          chainId,
+          balance,
+          networkName
+        }
+
+        setWalletState(newWalletState)
+        console.log('🎉 钱包连接完成:', newWalletState)
+
+        // 检查是否在Monad网络
+        if (chainId !== MONAD_NETWORK.chainId) {
+          console.log('⚠️ 不在Monad网络，尝试切换...')
+          await switchToMonadNetwork()
+        }
+
+        // 连接成功后进入红包页面
+        setStep('discover')
+        playSound('success')
+      }
+    } catch (error: any) {
+      console.error('❌ 连接钱包失败:', error)
+
+      if (error.code === 4001) {
+        setWalletError('用户拒绝连接钱包')
+        console.log('👤 用户拒绝了连接请求')
+      } else if (error.code === -32002) {
+        setWalletError('MetaMask已有连接请求待处理')
+        console.log('⏳ MetaMask已有连接请求待处理')
+      } else {
+        setWalletError(`连接失败: ${error.message || '未知错误'}`)
+        console.log('💥 连接失败:', error.message)
+      }
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
+  // 切换到Monad网络
+  const switchToMonadNetwork = async () => {
+    console.log('🔄 尝试切换到Monad网络...')
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: MONAD_NETWORK.chainId }],
+      })
+      console.log('✅ 成功切换到Monad网络')
+
+      // 重新获取钱包状态
+      await checkWalletConnection()
+    } catch (error: any) {
+      console.log('⚠️ 切换网络失败:', error)
+
+      if (error.code === 4902) {
+        console.log('📝 网络不存在，尝试添加...')
+        await addMonadNetwork()
+      } else if (error.code === 4001) {
+        console.log('👤 用户拒绝了网络切换')
+        setWalletError('用户拒绝切换网络')
+      } else {
+        console.log('💥 切换网络失败:', error.message)
+        setWalletError(`切换网络失败: ${error.message}`)
+      }
+    }
+  }
+
+  // 添加Monad网络
+  const addMonadNetwork = async () => {
+    console.log('➕ 尝试添加Monad网络...')
+
+    try {
+      await window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [MONAD_NETWORK],
+      })
+      console.log('✅ Monad网络添加成功')
+
+      // 重新获取钱包状态
+      await checkWalletConnection()
+    } catch (error: any) {
+      console.error('❌ 添加网络失败:', error)
+
+      if (error.code === 4001) {
+        setWalletError('用户拒绝添加Monad网络')
+        console.log('👤 用户拒绝了添加网络')
+      } else {
+        setWalletError(`添加网络失败: ${error.message}`)
+        console.log('💥 添加网络失败:', error.message)
+      }
+    }
+  }
+
+  // 设置钱包事件监听器
+  const setupWalletEventListeners = () => {
+    if (typeof window.ethereum !== 'undefined') {
+      console.log('🎧 设置钱包事件监听器...')
+
+      // 监听账户变化
+      window.ethereum.on('accountsChanged', handleAccountsChanged)
+      // 监听网络变化
+      window.ethereum.on('chainChanged', handleChainChanged)
+      // 监听连接状态变化
+      window.ethereum.on('connect', handleConnect)
+      window.ethereum.on('disconnect', handleDisconnect)
+    }
+  }
+
+  // 移除钱包事件监听器
+  const removeWalletEventListeners = () => {
+    if (typeof window.ethereum !== 'undefined') {
+      console.log('🔇 移除钱包事件监听器...')
+
+      window.ethereum.removeListener('accountsChanged', handleAccountsChanged)
+      window.ethereum.removeListener('chainChanged', handleChainChanged)
+      window.ethereum.removeListener('connect', handleConnect)
+      window.ethereum.removeListener('disconnect', handleDisconnect)
+    }
+  }
+
+  // 处理账户变化
+  const handleAccountsChanged = (accounts: string[]) => {
+    console.log('🔄 账户变化事件:', accounts)
+
+    if (accounts.length > 0) {
+      console.log('✅ 切换到新账户:', accounts[0])
+      checkWalletConnection()
+    } else {
+      console.log('❌ 账户已断开连接')
+      setWalletState({
+        isConnected: false,
+        address: '',
+        chainId: '',
+        balance: '',
+        networkName: ''
+      })
+      setStep('wallet')
+    }
+  }
+
+  // 处理网络变化
+  const handleChainChanged = (chainId: string) => {
+    console.log('🌐 网络变化事件:', chainId)
+    console.log('🔄 重新检查钱包状态...')
+    checkWalletConnection()
+  }
+
+  // 处理连接事件
+  const handleConnect = (connectInfo: any) => {
+    console.log('🔗 钱包连接事件:', connectInfo)
+    checkWalletConnection()
+  }
+
+  // 处理断开连接事件
+  const handleDisconnect = (error: any) => {
+    console.log('💔 钱包断开连接事件:', error)
+    setWalletState({
+      isConnected: false,
+      address: '',
+      chainId: '',
+      balance: '',
+      networkName: ''
+    })
+    setStep('wallet')
   }
 
   // 发现红包
@@ -220,12 +538,67 @@ function App() {
       ))}
 
       <div className='content-container'>
+        {/* 步骤0: 连接钱包 */}
+        {step === 'wallet' && (
+          <div className={`step-container ${isAnimating ? 'animate-out' : 'animate-in'}`}>
+            <div className='floating-icon'>
+              <div className='red-packet-icon'>🔗</div>
+            </div>
+
+            <h1 className='title gradient-text'>
+              CONNECT WALLET
+            </h1>
+
+            <p className='subtitle'>
+              CONNECT TO ACCESS MONAD RED PACKETS
+            </p>
+
+            {walletError && (
+              <div className='wallet-error'>
+                ⚠️ {walletError}
+              </div>
+            )}
+
+            <button
+              className='primary-button pulse-animation'
+              onClick={connectWallet}
+              disabled={isConnecting}
+            >
+              <span>{isConnecting ? 'CONNECTING...' : 'CONNECT METAMASK'}</span>
+              <div className='button-glow'></div>
+            </button>
+
+            <div className='wallet-info'>
+              <p>需要MetaMask钱包来使用红包功能</p>
+              <p>将自动切换到Monad测试网</p>
+            </div>
+          </div>
+        )}
+
         {/* 步骤1: 发现红包 */}
         {step === 'discover' && (
           <div
             className={`step-container ${
               isAnimating ? 'animate-out' : 'animate-in'
             }`}>
+            {/* 钱包状态显示 */}
+            {walletState.isConnected && (
+              <div className='wallet-status-display'>
+                <div className='wallet-info-item'>
+                  <span className='label'>ADDRESS:</span>
+                  <span className='value'>{walletState.address.slice(0, 6)}...{walletState.address.slice(-4)}</span>
+                </div>
+                <div className='wallet-info-item'>
+                  <span className='label'>NETWORK:</span>
+                  <span className='value'>{walletState.networkName}</span>
+                </div>
+                <div className='wallet-info-item'>
+                  <span className='label'>BALANCE:</span>
+                  <span className='value'>{walletState.balance} ETH</span>
+                </div>
+              </div>
+            )}
+
             <div className='floating-icon'>
               <div className='red-packet-icon'>🎁</div>
             </div>
@@ -240,6 +613,13 @@ function App() {
               disabled={isAnimating}>
               <span>CLAIM NOW</span>
               <div className='button-glow'></div>
+            </button>
+
+            <button
+              className='outline-button'
+              onClick={() => setStep('wallet')}
+              style={{ marginTop: '16px' }}>
+              DISCONNECT WALLET
             </button>
           </div>
         )}

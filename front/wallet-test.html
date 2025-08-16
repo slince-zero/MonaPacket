@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monad 红包 - 钱包连接测试</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            min-height: 100vh;
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .app {
+            background: #000000;
+            border: 4px solid #ffffff;
+            box-shadow: 8px 8px 0px #01DB83;
+            padding: 40px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .title {
+            font-size: 3rem;
+            font-weight: 900;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #FFD641;
+            text-shadow: 4px 4px 0px #000000;
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #ffffff;
+            margin-bottom: 48px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .primary-button {
+            background: #FFD641;
+            color: #000000;
+            border: 4px solid #000000;
+            padding: 20px 40px;
+            font-size: 1.3rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 6px 6px 0px #01DB83;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: inherit;
+            width: 100%;
+        }
+
+        .primary-button:hover {
+            transform: translate(-3px, -3px);
+            box-shadow: 9px 9px 0px #01DB83;
+        }
+
+        .primary-button:active {
+            transform: translate(0px, 0px);
+            box-shadow: 3px 3px 0px #01DB83;
+        }
+
+        .primary-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 6px 6px 0px #666666;
+        }
+
+        .wallet-status {
+            background: #ffffff;
+            border: 3px solid #000000;
+            padding: 24px;
+            margin-bottom: 32px;
+            box-shadow: 4px 4px 0px #01DB83;
+            text-align: left;
+        }
+
+        .wallet-info-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .wallet-info-item:last-child {
+            border-bottom: none;
+        }
+
+        .wallet-info-item .label {
+            color: #000000;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+        }
+
+        .wallet-info-item .value {
+            color: #000000;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+
+        .wallet-error {
+            background: #ff4444;
+            color: #ffffff;
+            border: 3px solid #000000;
+            padding: 16px;
+            margin: 20px 0;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 4px 4px 0px #000000;
+        }
+
+        .console-log {
+            background: #000000;
+            border: 2px solid #01DB83;
+            padding: 20px;
+            margin-top: 24px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: #01DB83;
+            text-align: left;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .outline-button {
+            background: transparent;
+            color: #ffffff;
+            border: 3px solid #ffffff;
+            padding: 14px 28px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 4px 4px 0px #ffffff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: inherit;
+            width: 100%;
+            margin-top: 16px;
+        }
+
+        .outline-button:hover {
+            background: #ffffff;
+            color: #000000;
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="app">
+            <!-- 钱包连接界面 -->
+            <div id="walletConnect">
+                <div class="title">CONNECT WALLET</div>
+                <div class="subtitle">ACCESS MONAD RED PACKETS</div>
+                
+                <div id="errorMessage" class="wallet-error hidden"></div>
+                
+                <button id="connectBtn" class="primary-button">
+                    CONNECT METAMASK
+                </button>
+                
+                <div class="wallet-info">
+                    <p>需要MetaMask钱包来使用红包功能</p>
+                    <p>将自动切换到Monad测试网</p>
+                </div>
+            </div>
+
+            <!-- 钱包状态显示 -->
+            <div id="walletStatus" class="wallet-status hidden">
+                <div class="wallet-info-item">
+                    <span class="label">STATUS:</span>
+                    <span class="value" id="connectionStatus">DISCONNECTED</span>
+                </div>
+                <div class="wallet-info-item">
+                    <span class="label">ADDRESS:</span>
+                    <span class="value" id="walletAddress">-</span>
+                </div>
+                <div class="wallet-info-item">
+                    <span class="label">NETWORK:</span>
+                    <span class="value" id="networkName">-</span>
+                </div>
+                <div class="wallet-info-item">
+                    <span class="label">CHAIN ID:</span>
+                    <span class="value" id="chainId">-</span>
+                </div>
+                <div class="wallet-info-item">
+                    <span class="label">BALANCE:</span>
+                    <span class="value" id="balance">-</span>
+                </div>
+            </div>
+
+            <button id="disconnectBtn" class="outline-button hidden">
+                DISCONNECT WALLET
+            </button>
+
+            <!-- 控制台日志 -->
+            <div class="console-log">
+                <div style="color: #FFD641; font-weight: bold; margin-bottom: 12px;">CONSOLE LOG:</div>
+                <div id="logContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Monad网络配置
+        const MONAD_NETWORK = {
+            chainId: '0x15B3', // 5555 in hex
+            chainName: 'Monad Testnet',
+            nativeCurrency: {
+                name: 'MON',
+                symbol: 'MON',
+                decimals: 18,
+            },
+            rpcUrls: ['https://testnet-rpc.monad.xyz'],
+            blockExplorerUrls: ['https://testnet-explorer.monad.xyz'],
+        };
+
+        let walletState = {
+            isConnected: false,
+            address: '',
+            chainId: '',
+            balance: '',
+            networkName: ''
+        };
+
+        // 日志函数
+        function addLog(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            
+            // 同时输出到浏览器控制台
+            console.log(message);
+        }
+
+        // 获取网络名称
+        function getNetworkName(chainId) {
+            const networks = {
+                '0x1': 'Ethereum Mainnet',
+                '0x5': 'Goerli Testnet',
+                '0x89': 'Polygon Mainnet',
+                '0x38': 'BSC Mainnet',
+                '0x15B3': 'Monad Testnet',
+            };
+            return networks[chainId] || `Unknown Network (${chainId})`;
+        }
+
+        // 获取余额
+        async function getBalance(address) {
+            try {
+                const balance = await window.ethereum.request({
+                    method: 'eth_getBalance',
+                    params: [address, 'latest']
+                });
+                const balanceInEth = parseInt(balance, 16) / Math.pow(10, 18);
+                addLog(`💎 账户余额: ${balanceInEth.toFixed(4)} ETH`);
+                return balanceInEth.toFixed(4);
+            } catch (error) {
+                addLog(`❌ 获取余额失败: ${error.message}`);
+                return '0.0000';
+            }
+        }
+
+        // 更新UI显示
+        function updateUI() {
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const walletStatus = document.getElementById('walletStatus');
+            const walletConnect = document.getElementById('walletConnect');
+
+            if (walletState.isConnected) {
+                walletConnect.classList.add('hidden');
+                walletStatus.classList.remove('hidden');
+                disconnectBtn.classList.remove('hidden');
+
+                document.getElementById('connectionStatus').textContent = 'CONNECTED';
+                document.getElementById('walletAddress').textContent = 
+                    `${walletState.address.slice(0, 6)}...${walletState.address.slice(-4)}`;
+                document.getElementById('networkName').textContent = walletState.networkName;
+                document.getElementById('chainId').textContent = walletState.chainId;
+                document.getElementById('balance').textContent = `${walletState.balance} ETH`;
+            } else {
+                walletConnect.classList.remove('hidden');
+                walletStatus.classList.add('hidden');
+                disconnectBtn.classList.add('hidden');
+            }
+        }
+
+        // 检查钱包连接
+        async function checkWalletConnection() {
+            addLog('🔍 检查钱包连接状态...');
+            
+            if (typeof window.ethereum === 'undefined') {
+                addLog('❌ 未检测到MetaMask');
+                showError('请安装MetaMask钱包');
+                return;
+            }
+
+            addLog('✅ 检测到MetaMask');
+
+            try {
+                const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+                addLog(`📊 账户信息: ${JSON.stringify(accounts)}`);
+                
+                if (accounts.length > 0) {
+                    const address = accounts[0];
+                    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    const balance = await getBalance(address);
+                    const networkName = getNetworkName(chainId);
+                    
+                    walletState = {
+                        isConnected: true,
+                        address,
+                        chainId,
+                        balance,
+                        networkName
+                    };
+                    
+                    addLog(`💰 钱包状态: ${JSON.stringify(walletState)}`);
+                    updateUI();
+                } else {
+                    addLog('⚠️ 钱包未连接');
+                    walletState.isConnected = false;
+                    updateUI();
+                }
+            } catch (error) {
+                addLog(`❌ 检查钱包连接失败: ${error.message}`);
+                showError('检查钱包连接失败');
+            }
+        }
+
+        // 连接钱包
+        async function connectWallet() {
+            addLog('🔗 开始连接钱包...');
+            
+            if (typeof window.ethereum === 'undefined') {
+                addLog('❌ 未检测到MetaMask');
+                showError('请安装MetaMask钱包');
+                return;
+            }
+
+            const connectBtn = document.getElementById('connectBtn');
+            connectBtn.textContent = 'CONNECTING...';
+            connectBtn.disabled = true;
+
+            try {
+                addLog('📞 请求账户访问权限...');
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts',
+                });
+
+                if (accounts.length > 0) {
+                    addLog(`✅ 账户连接成功: ${accounts[0]}`);
+                    
+                    const address = accounts[0];
+                    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    const balance = await getBalance(address);
+                    const networkName = getNetworkName(chainId);
+                    
+                    walletState = {
+                        isConnected: true,
+                        address,
+                        chainId,
+                        balance,
+                        networkName
+                    };
+                    
+                    addLog(`🎉 钱包连接完成: ${JSON.stringify(walletState)}`);
+                    
+                    // 检查是否在Monad网络
+                    if (chainId !== MONAD_NETWORK.chainId) {
+                        addLog('⚠️ 不在Monad网络，尝试切换...');
+                        await switchToMonadNetwork();
+                    }
+                    
+                    updateUI();
+                    hideError();
+                }
+            } catch (error) {
+                addLog(`❌ 连接钱包失败: ${error.message}`);
+                
+                if (error.code === 4001) {
+                    showError('用户拒绝连接钱包');
+                    addLog('👤 用户拒绝了连接请求');
+                } else if (error.code === -32002) {
+                    showError('MetaMask已有连接请求待处理');
+                    addLog('⏳ MetaMask已有连接请求待处理');
+                } else {
+                    showError(`连接失败: ${error.message || '未知错误'}`);
+                    addLog(`💥 连接失败: ${error.message}`);
+                }
+            } finally {
+                connectBtn.textContent = 'CONNECT METAMASK';
+                connectBtn.disabled = false;
+            }
+        }
+
+        // 切换到Monad网络
+        async function switchToMonadNetwork() {
+            addLog('🔄 尝试切换到Monad网络...');
+            
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: MONAD_NETWORK.chainId }],
+                });
+                addLog('✅ 成功切换到Monad网络');
+                
+                // 重新获取钱包状态
+                await checkWalletConnection();
+            } catch (error) {
+                addLog(`⚠️ 切换网络失败: ${error.message}`);
+                
+                if (error.code === 4902) {
+                    addLog('📝 网络不存在，尝试添加...');
+                    await addMonadNetwork();
+                } else if (error.code === 4001) {
+                    addLog('👤 用户拒绝了网络切换');
+                    showError('用户拒绝切换网络');
+                } else {
+                    addLog(`💥 切换网络失败: ${error.message}`);
+                    showError(`切换网络失败: ${error.message}`);
+                }
+            }
+        }
+
+        // 添加Monad网络
+        async function addMonadNetwork() {
+            addLog('➕ 尝试添加Monad网络...');
+            
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [MONAD_NETWORK],
+                });
+                addLog('✅ Monad网络添加成功');
+                
+                // 重新获取钱包状态
+                await checkWalletConnection();
+            } catch (error) {
+                addLog(`❌ 添加网络失败: ${error.message}`);
+                
+                if (error.code === 4001) {
+                    showError('用户拒绝添加Monad网络');
+                    addLog('👤 用户拒绝了添加网络');
+                } else {
+                    showError(`添加网络失败: ${error.message}`);
+                    addLog(`💥 添加网络失败: ${error.message}`);
+                }
+            }
+        }
+
+        // 断开连接
+        function disconnectWallet() {
+            addLog('💔 断开钱包连接');
+            walletState = {
+                isConnected: false,
+                address: '',
+                chainId: '',
+                balance: '',
+                networkName: ''
+            };
+            updateUI();
+            hideError();
+        }
+
+        // 显示错误
+        function showError(message) {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = `⚠️ ${message}`;
+            errorElement.classList.remove('hidden');
+        }
+
+        // 隐藏错误
+        function hideError() {
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.classList.add('hidden');
+        }
+
+        // 事件监听器
+        function setupEventListeners() {
+            if (typeof window.ethereum !== 'undefined') {
+                addLog('🎧 设置钱包事件监听器...');
+                
+                // 监听账户变化
+                window.ethereum.on('accountsChanged', (accounts) => {
+                    addLog(`🔄 账户变化事件: ${JSON.stringify(accounts)}`);
+                    if (accounts.length > 0) {
+                        addLog(`✅ 切换到新账户: ${accounts[0]}`);
+                        checkWalletConnection();
+                    } else {
+                        addLog('❌ 账户已断开连接');
+                        disconnectWallet();
+                    }
+                });
+
+                // 监听网络变化
+                window.ethereum.on('chainChanged', (chainId) => {
+                    addLog(`🌐 网络变化事件: ${chainId}`);
+                    addLog('🔄 重新检查钱包状态...');
+                    checkWalletConnection();
+                });
+
+                // 监听连接事件
+                window.ethereum.on('connect', (connectInfo) => {
+                    addLog(`🔗 钱包连接事件: ${JSON.stringify(connectInfo)}`);
+                    checkWalletConnection();
+                });
+
+                // 监听断开连接事件
+                window.ethereum.on('disconnect', (error) => {
+                    addLog(`💔 钱包断开连接事件: ${JSON.stringify(error)}`);
+                    disconnectWallet();
+                });
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('🚀 页面加载完成，开始初始化...');
+            
+            // 绑定事件
+            document.getElementById('connectBtn').addEventListener('click', connectWallet);
+            document.getElementById('disconnectBtn').addEventListener('click', disconnectWallet);
+            
+            // 设置事件监听器
+            setupEventListeners();
+            
+            // 检查初始连接状态
+            checkWalletConnection();
+        });
+    </script>
+</body>
+</html>

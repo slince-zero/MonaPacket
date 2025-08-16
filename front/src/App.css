@@ -792,6 +792,70 @@ body {
   justify-content: center;
 }
 
+/* 钱包连接相关样式 */
+.wallet-error {
+  background: #ff4444;
+  color: #ffffff;
+  border: 3px solid #000000;
+  padding: 16px;
+  margin: 20px 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 4px 4px 0px #000000;
+}
+
+.wallet-info {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 20px;
+  margin-top: 24px;
+  text-align: center;
+}
+
+.wallet-info p {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.9rem;
+  margin: 8px 0;
+  font-weight: 600;
+}
+
+.wallet-status-display {
+  background: #ffffff;
+  border: 3px solid #000000;
+  padding: 20px;
+  margin-bottom: 32px;
+  box-shadow: 4px 4px 0px #01DB83;
+  text-align: left;
+}
+
+.wallet-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+}
+
+.wallet-info-item:last-child {
+  border-bottom: none;
+}
+
+.wallet-info-item .label {
+  color: #000000;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.9rem;
+}
+
+.wallet-info-item .value {
+  color: #000000;
+  font-weight: 700;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9rem;
+}
+
 /* 移动端适配 */
 @media (max-width: 768px) {
   .app-container {
