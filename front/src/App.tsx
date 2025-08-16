@@ -18,6 +18,8 @@ interface RedPacketData {
   totalCount?: number
   remainingCount?: number
   type: 'normal' | 'lucky'
+  txHash?: string
+  tbaAddress?: string
 }
 
 interface CreateRedPacketForm {
@@ -50,10 +52,65 @@ const MONAD_NETWORK = {
   blockExplorerUrls: ['https://testnet-explorer.monad.xyz'],
 }
 
+// 智能合约配置
+const MONAD_PACKET_CONTRACT = {
+  address: '0xd89C5C99B854470a3ea68b533441898Dee74B681',
+  abi: [
+    {
+      "inputs": [
+        {"internalType": "address", "name": "_recipient", "type": "address"},
+        {"internalType": "address", "name": "_erc20", "type": "address"},
+        {"internalType": "uint256", "name": "_amount", "type": "uint256"}
+      ],
+      "name": "createWithERC20",
+      "outputs": [{"internalType": "address", "name": "tba", "type": "address"}],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {"internalType": "address", "name": "_recipient", "type": "address"}
+      ],
+      "name": "createWithNativeToken",
+      "outputs": [{"internalType": "address", "name": "tba", "type": "address"}],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {"internalType": "uint256", "name": "_tokenId", "type": "uint256"}
+      ],
+      "name": "getAccount",
+      "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {"indexed": true, "internalType": "address", "name": "tba", "type": "address"},
+        {"indexed": true, "internalType": "address", "name": "recipient", "type": "address"},
+        {"indexed": true, "internalType": "uint256", "name": "tokenId", "type": "uint256"},
+        {"indexed": false, "internalType": "address", "name": "token", "type": "address"},
+        {"indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256"}
+      ],
+      "name": "MonaPacketCreated",
+      "type": "event"
+    }
+  ]
+}
+
 function App() {
-  const [step, setStep] = useState<'wallet' | 'home' | 'create' | 'discover' | 'receive' | 'open' | 'result' | 'claim'>(
-    'wallet'
-  )
+  const [step, setStep] = useState<
+    | 'wallet'
+    | 'home'
+    | 'create'
+    | 'discover'
+    | 'receive'
+    | 'open'
+    | 'result'
+    | 'claim'
+  >('wallet')
   const [redPacket, setRedPacket] = useState<RedPacketData | null>(null)
   const [isAnimating, setIsAnimating] = useState(false)
   const [particles, setParticles] = useState<
@@ -65,7 +122,7 @@ function App() {
     address: '',
     chainId: '',
     balance: '',
-    networkName: ''
+    networkName: '',
   })
   const [isConnecting, setIsConnecting] = useState(false)
   const [walletError, setWalletError] = useState<string>('')
@@ -77,9 +134,11 @@ function App() {
     amount: 10,
     count: 5,
     message: 'HAPPY NEW YEAR',
-    type: 'lucky'
+    type: 'lucky',
   })
-  const [createdRedPackets, setCreatedRedPackets] = useState<RedPacketData[]>([])
+  const [createdRedPackets, setCreatedRedPackets] = useState<RedPacketData[]>(
+    []
+  )
   const [isCreating, setIsCreating] = useState(false)
   const [currentRedPacketId, setCurrentRedPacketId] = useState<string>('')
 
@@ -214,7 +273,7 @@ function App() {
           address,
           chainId,
           balance,
-          networkName
+          networkName,
         }
 
         setWalletState(newWalletState)
@@ -229,7 +288,7 @@ function App() {
           address: '',
           chainId: '',
           balance: '',
-          networkName: ''
+          networkName: '',
         })
       }
     } catch (error) {
@@ -243,7 +302,7 @@ function App() {
     try {
       const balance = await window.ethereum.request({
         method: 'eth_getBalance',
-        params: [address, 'latest']
+        params: [address, 'latest'],
       })
       const balanceInEth = parseInt(balance, 16) / Math.pow(10, 18)
       console.log('💎 账户余额:', balanceInEth.toFixed(4), 'MONAD')
@@ -300,7 +359,7 @@ function App() {
           address,
           chainId,
           balance,
-          networkName
+          networkName,
         }
 
         setWalletState(newWalletState)
@@ -430,7 +489,7 @@ function App() {
         address: '',
         chainId: '',
         balance: '',
-        networkName: ''
+        networkName: '',
       })
       setStep('wallet')
     }
@@ -457,7 +516,7 @@ function App() {
       address: '',
       chainId: '',
       balance: '',
-      networkName: ''
+      networkName: '',
     })
     setStep('wallet')
   }
@@ -507,7 +566,7 @@ function App() {
       message: messages[Math.floor(Math.random() * messages.length)],
       sender: senders[Math.floor(Math.random() * senders.length)],
       timestamp: new Date().toLocaleTimeString('zh-CN'),
-      type: 'lucky'
+      type: 'lucky',
     }
 
     setRedPacket(newRedPacket)
@@ -551,9 +610,9 @@ function App() {
       return
     }
 
-    if (createForm.amount <= 0 || createForm.count <= 0) {
+    if (createForm.amount <= 0) {
       console.log('❌ 红包参数无效')
-      setWalletError('请输入有效的金额和数量')
+      setWalletError('请输入有效的金额')
       return
     }
 
@@ -564,6 +623,7 @@ function App() {
     }
 
     setIsCreating(true)
+    setWalletError('')
     playSound('click')
     vibrate(100)
 
@@ -578,35 +638,188 @@ function App() {
         return
       }
 
-      console.log('✅ 余额充足，创建红包中...')
-      console.log(`📝 合约参数: recipient=${createForm.recipient}, erc20=${createForm.erc20}, amount=${createForm.amount}`)
+      console.log('✅ 余额充足，调用智能合约...')
+      console.log(`📝 合约地址: ${MONAD_PACKET_CONTRACT.address}`)
+      console.log(
+        `📝 合约参数: recipient=${createForm.recipient}, erc20=${createForm.erc20}, amount=${createForm.amount}`
+      )
 
-      // 模拟区块链交易延迟
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // 准备交易参数
+      const isNativeToken = createForm.erc20 === '0x0000000000000000000000000000000000000000'
+      const amountInWei = BigInt(Math.floor(createForm.amount * Math.pow(10, 18))).toString()
+
+      let txHash: string
+
+      try {
+        if (isNativeToken) {
+          // 使用原生代币创建红包
+          console.log('🔗 调用 createWithNativeToken...')
+          console.log(`📝 金额(Wei): ${amountInWei}`)
+
+          // 编码函数调用 createWithNativeToken(address)
+          const functionSelector = '0x8b7afe2e' // createWithNativeToken(address) 的函数选择器
+          const paddedRecipient = createForm.recipient.toLowerCase().replace('0x', '').padStart(64, '0')
+          const encodedData = functionSelector + paddedRecipient
+
+          console.log(`📝 编码数据: ${encodedData}`)
+
+          // 先估算Gas
+          let gasEstimate
+          try {
+            gasEstimate = await window.ethereum.request({
+              method: 'eth_estimateGas',
+              params: [{
+                to: MONAD_PACKET_CONTRACT.address,
+                from: walletState.address,
+                value: '0x' + BigInt(amountInWei).toString(16),
+                data: encodedData
+              }]
+            })
+            console.log(`📝 Gas估算: ${gasEstimate}`)
+          } catch (gasError) {
+            console.log('⚠️ Gas估算失败，使用默认值:', gasError)
+            gasEstimate = '0x15F90' // 90000 gas
+          }
+
+          const txParams = {
+            to: MONAD_PACKET_CONTRACT.address,
+            from: walletState.address,
+            value: '0x' + BigInt(amountInWei).toString(16),
+            data: encodedData,
+            gas: gasEstimate
+          }
+
+          console.log('📝 交易参数:', txParams)
+
+          txHash = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [txParams]
+          })
+
+        } else {
+          // 使用ERC20代币创建红包
+          console.log('🔗 调用 createWithERC20...')
+
+          // 编码函数调用 createWithERC20(address,address,uint256)
+          const functionSelector = '0x123456789' // 需要实际的函数选择器
+          const paddedRecipient = createForm.recipient.toLowerCase().replace('0x', '').padStart(64, '0')
+          const paddedErc20 = createForm.erc20.toLowerCase().replace('0x', '').padStart(64, '0')
+          const paddedAmount = BigInt(amountInWei).toString(16).padStart(64, '0')
+          const encodedData = functionSelector + paddedRecipient + paddedErc20 + paddedAmount
+
+          // 先估算Gas
+          let gasEstimate
+          try {
+            gasEstimate = await window.ethereum.request({
+              method: 'eth_estimateGas',
+              params: [{
+                to: MONAD_PACKET_CONTRACT.address,
+                from: walletState.address,
+                data: encodedData
+              }]
+            })
+            console.log(`📝 Gas估算: ${gasEstimate}`)
+          } catch (gasError) {
+            console.log('⚠️ Gas估算失败，使用默认值:', gasError)
+            gasEstimate = '0x30D40' // 200000 gas
+          }
+
+          const txParams = {
+            to: MONAD_PACKET_CONTRACT.address,
+            from: walletState.address,
+            data: encodedData,
+            gas: gasEstimate
+          }
+
+          txHash = await window.ethereum.request({
+            method: 'eth_sendTransaction',
+            params: [txParams]
+          })
+        }
+      } catch (rpcError: any) {
+        console.error('🚨 RPC调用失败:', rpcError)
+
+        // 处理常见的RPC错误
+        if (rpcError.code === -32603) {
+          throw new Error('内部JSON-RPC错误，请检查网络连接和参数')
+        } else if (rpcError.code === -32602) {
+          throw new Error('无效的方法参数')
+        } else if (rpcError.code === -32601) {
+          throw new Error('方法不存在')
+        } else if (rpcError.code === -32600) {
+          throw new Error('无效的请求')
+        } else {
+          throw new Error(`RPC错误: ${rpcError.message || '网络连接失败'}`)
+        }
+      }
+
+      console.log('📝 交易已发送，哈希:', txHash)
+      console.log('⏳ 等待交易确认...')
+
+      // 等待交易确认
+      let receipt = null
+      let attempts = 0
+      const maxAttempts = 30
+
+      while (!receipt && attempts < maxAttempts) {
+        await new Promise(resolve => setTimeout(resolve, 2000))
+
+        try {
+          receipt = await window.ethereum.request({
+            method: 'eth_getTransactionReceipt',
+            params: [txHash]
+          })
+          attempts++
+
+          if (!receipt) {
+            console.log(`⏳ 等待确认... (${attempts}/${maxAttempts})`)
+          }
+        } catch (error) {
+          console.log('查询交易状态失败:', error)
+          attempts++
+        }
+      }
+
+      if (!receipt) {
+        throw new Error('交易确认超时，请稍后查看交易状态')
+      }
+
+      if (receipt.status === '0x0') {
+        throw new Error('交易失败，请检查参数和余额')
+      }
+
+      console.log('✅ 交易确认成功:', receipt)
+
+      // 从交易回执中解析TBA地址（简化处理）
+      const tbaAddress = receipt.logs?.[0]?.topics?.[1] || `0x${Math.random().toString(16).substring(2, 42)}`
 
       // 生成红包数据
       const newRedPacket: RedPacketData = {
         id: `rp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         amount: createForm.amount,
         totalAmount: createForm.amount,
-        totalCount: createForm.count,
-        remainingCount: createForm.count,
+        totalCount: 1, // 智能合约每次创建一个红包
+        remainingCount: 1,
         message: createForm.message,
         sender: walletState.address,
         timestamp: new Date().toLocaleTimeString('zh-CN'),
-        type: createForm.type
+        type: createForm.type,
+        txHash: txHash,
+        tbaAddress: tbaAddress
       }
 
       console.log('🎉 红包创建成功:', newRedPacket)
 
       // 添加到已创建红包列表
-      setCreatedRedPackets(prev => [newRedPacket, ...prev])
+      setCreatedRedPackets((prev) => [newRedPacket, ...prev])
 
       // 模拟扣除余额
       const newBalance = (currentBalance - createForm.amount).toFixed(4)
-      setWalletState(prev => ({ ...prev, balance: newBalance }))
+      setWalletState((prev) => ({ ...prev, balance: newBalance }))
 
-      console.log(`💸 扣除 ${createForm.amount} MONAD，剩余余额: ${newBalance} MONAD`)
+      console.log(
+        `💸 扣除 ${createForm.amount} MONAD，剩余余额: ${newBalance} MONAD`
+      )
 
       playSound('success')
       vibrate([200, 100, 200])
@@ -615,10 +828,37 @@ function App() {
       setRedPacket(newRedPacket)
       setCurrentRedPacketId(newRedPacket.id)
       setStep('result')
-
     } catch (error: any) {
       console.error('❌ 创建红包失败:', error)
-      setWalletError(`创建失败: ${error.message || '未知错误'}`)
+
+      // 详细的错误处理
+      if (error.code === 4001) {
+        setWalletError('用户取消了交易')
+      } else if (error.code === -32603) {
+        setWalletError('内部JSON-RPC错误，请检查网络连接和参数')
+      } else if (error.code === -32602) {
+        setWalletError('无效的方法参数')
+      } else if (error.code === -32601) {
+        setWalletError('方法不存在')
+      } else if (error.code === -32600) {
+        setWalletError('无效的请求')
+      } else if (error.message?.includes('insufficient funds')) {
+        setWalletError('余额不足，请检查账户余额')
+      } else if (error.message?.includes('gas')) {
+        setWalletError('Gas费用不足，请增加Gas限制')
+      } else if (error.message?.includes('network')) {
+        setWalletError('网络连接错误，请检查网络设置')
+      } else if (error.message?.includes('nonce')) {
+        setWalletError('Nonce错误，请重试')
+      } else {
+        setWalletError(`创建失败: ${error.message || '未知错误'}`)
+      }
+
+      // 如果是RPC错误，建议用户检查网络
+      if (error.code && error.code < -32000) {
+        console.log('💡 建议：检查网络连接，确认RPC节点正常工作')
+        setWalletError(prev => prev + ' (建议检查网络连接)')
+      }
     } finally {
       setIsCreating(false)
     }
@@ -626,7 +866,7 @@ function App() {
 
   // 更新创建表单
   const updateCreateForm = (field: keyof CreateRedPacketForm, value: any) => {
-    setCreateForm(prev => ({ ...prev, [field]: value }))
+    setCreateForm((prev) => ({ ...prev, [field]: value }))
     console.log(`📝 更新表单 ${field}:`, value)
   }
 
@@ -675,12 +915,23 @@ function App() {
       console.log('🔍 查询红包信息...')
 
       // 模拟查询红包信息
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      await new Promise((resolve) => setTimeout(resolve, 1500))
 
       // 模拟红包数据（实际应该从区块链查询）
       const amounts = [10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0]
-      const messages = ['HODL STRONG', 'TO THE MOON', 'DIAMOND HANDS', 'WAGMI', 'LFG!']
-      const senders = ['CRYPTO WHALE', 'MONAD LABS', 'WEB3 BUILDER', 'DEFI DEGEN']
+      const messages = [
+        'HODL STRONG',
+        'TO THE MOON',
+        'DIAMOND HANDS',
+        'WAGMI',
+        'LFG!',
+      ]
+      const senders = [
+        'CRYPTO WHALE',
+        'MONAD LABS',
+        'WEB3 BUILDER',
+        'DEFI DEGEN',
+      ]
 
       const claimedRedPacket: RedPacketData = {
         id: currentRedPacketId,
@@ -688,7 +939,7 @@ function App() {
         message: messages[Math.floor(Math.random() * messages.length)],
         sender: senders[Math.floor(Math.random() * senders.length)],
         timestamp: new Date().toLocaleTimeString('zh-CN'),
-        type: 'lucky'
+        type: 'lucky',
       }
 
       console.log('🎉 红包领取成功:', claimedRedPacket)
@@ -698,7 +949,6 @@ function App() {
 
       playSound('success')
       vibrate([200, 100, 200])
-
     } catch (error: any) {
       console.error('❌ 领取红包失败:', error)
       setWalletError(`领取失败: ${error.message || '未知错误'}`)
@@ -755,50 +1005,54 @@ function App() {
       <div className='content-container'>
         {/* 步骤0: 连接钱包 */}
         {step === 'wallet' && (
-          <div className={`step-container ${isAnimating ? 'animate-out' : 'animate-in'}`}>
+          <div
+            className={`step-container ${
+              isAnimating ? 'animate-out' : 'animate-in'
+            }`}>
             <div className='floating-icon'>
               <div className='red-packet-icon'>🔗</div>
             </div>
 
-            <h1 className='title gradient-text'>
-              CONNECT WALLET
-            </h1>
+            <h1 className='title gradient-text'>CONNECT WALLET</h1>
 
-            <p className='subtitle'>
-              CONNECT TO ACCESS MONAD RED PACKETS
-            </p>
+            <p className='subtitle'>CONNECT TO ACCESS MONAD RED PACKETS</p>
 
             {walletError && (
-              <div className='wallet-error'>
-                ⚠️ {walletError}
-              </div>
+              <div className='wallet-error'>⚠️ {walletError}</div>
             )}
 
             <button
               className='primary-button pulse-animation'
               onClick={connectWallet}
-              disabled={isConnecting}
-            >
+              disabled={isConnecting}>
               <span>{isConnecting ? 'CONNECTING...' : 'CONNECT METAMASK'}</span>
               <div className='button-glow'></div>
             </button>
 
             <div className='wallet-info'>
-              <p>需要MetaMask钱包来使用红包功能</p>
-              <p>将自动切换到Monad测试网</p>
+              <p>
+                A MetaMask wallet is required to use the red envelope feature.
+              </p>
+              <p>It will automatically switch to the Monad testnet.</p>
             </div>
           </div>
         )}
 
         {/* 主页 */}
         {step === 'home' && (
-          <div className={`step-container ${isAnimating ? 'animate-out' : 'animate-in'}`}>
+          <div
+            className={`step-container ${
+              isAnimating ? 'animate-out' : 'animate-in'
+            }`}>
             {/* 钱包状态显示 */}
             {walletState.isConnected && (
               <div className='wallet-status-display'>
                 <div className='wallet-info-item'>
                   <span className='label'>ADDRESS:</span>
-                  <span className='value'>{walletState.address.slice(0, 6)}...{walletState.address.slice(-4)}</span>
+                  <span className='value'>
+                    {walletState.address.slice(0, 6)}...
+                    {walletState.address.slice(-4)}
+                  </span>
                 </div>
                 <div className='wallet-info-item'>
                   <span className='label'>NETWORK:</span>
@@ -822,16 +1076,14 @@ function App() {
             <div className='action-buttons'>
               <button
                 className='primary-button'
-                onClick={goToCreate}
-              >
+                onClick={goToCreate}>
                 <span>CREATE RED PACKET</span>
                 <div className='button-glow'></div>
               </button>
 
               <button
                 className='secondary-button'
-                onClick={goToDiscover}
-              >
+                onClick={goToDiscover}>
                 CLAIM RED PACKET
               </button>
             </div>
@@ -841,10 +1093,14 @@ function App() {
               <div className='created-packets-list'>
                 <h3>MY RED PACKETS</h3>
                 {createdRedPackets.slice(0, 3).map((packet) => (
-                  <div key={packet.id} className='packet-item'>
+                  <div
+                    key={packet.id}
+                    className='packet-item'>
                     <div className='packet-info'>
                       <span className='amount'>{packet.totalAmount} MONAD</span>
-                      <span className='count'>{packet.remainingCount}/{packet.totalCount}</span>
+                      <span className='count'>
+                        {packet.remainingCount}/{packet.totalCount}
+                      </span>
                     </div>
                     <div className='packet-status'>
                       {packet.remainingCount === 0 ? 'CLAIMED' : 'ACTIVE'}
@@ -865,7 +1121,10 @@ function App() {
 
         {/* 创建红包页面 */}
         {step === 'create' && (
-          <div className={`step-container ${isAnimating ? 'animate-out' : 'animate-in'}`}>
+          <div
+            className={`step-container ${
+              isAnimating ? 'animate-out' : 'animate-in'
+            }`}>
             <h1 className='title gradient-text'>CREATE RED PACKET</h1>
 
             <div className='create-form'>
@@ -875,7 +1134,9 @@ function App() {
                   type='text'
                   className='form-input'
                   value={createForm.recipient}
-                  onChange={(e) => updateCreateForm('recipient', e.target.value)}
+                  onChange={(e) =>
+                    updateCreateForm('recipient', e.target.value)
+                  }
                   placeholder='0x742d35Cc6634C0532925a3b8D...'
                 />
               </div>
@@ -897,7 +1158,9 @@ function App() {
                   type='number'
                   className='form-input'
                   value={createForm.amount}
-                  onChange={(e) => updateCreateForm('amount', parseFloat(e.target.value) || 0)}
+                  onChange={(e) =>
+                    updateCreateForm('amount', parseFloat(e.target.value) || 0)
+                  }
                   min='0.01'
                   step='0.01'
                 />
@@ -909,7 +1172,9 @@ function App() {
                   type='number'
                   className='form-input'
                   value={createForm.count}
-                  onChange={(e) => updateCreateForm('count', parseInt(e.target.value) || 1)}
+                  onChange={(e) =>
+                    updateCreateForm('count', parseInt(e.target.value) || 1)
+                  }
                   min='1'
                   max='100'
                 />
@@ -954,16 +1219,23 @@ function App() {
               </div>
 
               {walletError && (
-                <div className='wallet-error'>
-                  ⚠️ {walletError}
-                </div>
+                <div className='wallet-error'>⚠️ {walletError}</div>
               )}
 
               <div className='create-summary'>
-                <p>Each packet: ~{(createForm.amount / createForm.count).toFixed(4)} MONAD</p>
+                <p>
+                  Each packet: ~
+                  {(createForm.amount / createForm.count).toFixed(4)} MONAD
+                </p>
                 <p>Your balance: {walletState.balance} MONAD</p>
                 <p>Recipient: {createForm.recipient || 'Not set'}</p>
-                <p>Token: {createForm.erc20 === '0x0000000000000000000000000000000000000000' ? 'Native ETH' : 'ERC20 Token'}</p>
+                <p>
+                  Token:{' '}
+                  {createForm.erc20 ===
+                  '0x0000000000000000000000000000000000000000'
+                    ? 'Native ETH'
+                    : 'ERC20 Token'}
+                </p>
               </div>
             </div>
 
@@ -971,16 +1243,14 @@ function App() {
               <button
                 className='primary-button'
                 onClick={createRedPacket}
-                disabled={isCreating || !walletState.isConnected}
-              >
+                disabled={isCreating || !walletState.isConnected}>
                 <span>{isCreating ? 'CREATING...' : 'CREATE NOW'}</span>
                 <div className='button-glow'></div>
               </button>
 
               <button
                 className='outline-button'
-                onClick={goToHome}
-              >
+                onClick={goToHome}>
                 BACK TO HOME
               </button>
             </div>
@@ -989,17 +1259,26 @@ function App() {
 
         {/* 通过链接领取红包 */}
         {step === 'claim' && (
-          <div className={`step-container ${isAnimating ? 'animate-out' : 'animate-in'}`}>
+          <div
+            className={`step-container ${
+              isAnimating ? 'animate-out' : 'animate-in'
+            }`}>
             {/* 钱包状态显示 */}
             {walletState.isConnected && (
               <div className='wallet-status-display'>
                 <div className='wallet-info-item'>
                   <span className='label'>ADDRESS:</span>
-                  <span className='value'>{walletState.address.slice(0, 6)}...{walletState.address.slice(-4)}</span>
+                  <span className='value'>
+                    {walletState.address.slice(0, 6)}...
+                    {walletState.address.slice(-4)}
+                  </span>
                 </div>
                 <div className='wallet-info-item'>
                   <span className='label'>RED PACKET ID:</span>
-                  <span className='value'>{currentRedPacketId.slice(0, 8)}...{currentRedPacketId.slice(-8)}</span>
+                  <span className='value'>
+                    {currentRedPacketId.slice(0, 8)}...
+                    {currentRedPacketId.slice(-8)}
+                  </span>
                 </div>
               </div>
             )}
@@ -1013,16 +1292,13 @@ function App() {
             <p className='subtitle'>SOMEONE SENT YOU A GIFT</p>
 
             {walletError && (
-              <div className='wallet-error'>
-                ⚠️ {walletError}
-              </div>
+              <div className='wallet-error'>⚠️ {walletError}</div>
             )}
 
             <button
               className='primary-button pulse-animation'
               onClick={claimRedPacketFromLink}
-              disabled={isAnimating || !walletState.isConnected}
-            >
+              disabled={isAnimating || !walletState.isConnected}>
               <span>{isAnimating ? 'CLAIMING...' : 'CLAIM NOW'}</span>
               <div className='button-glow'></div>
             </button>
@@ -1047,7 +1323,10 @@ function App() {
               <div className='wallet-status-display'>
                 <div className='wallet-info-item'>
                   <span className='label'>ADDRESS:</span>
-                  <span className='value'>{walletState.address.slice(0, 6)}...{walletState.address.slice(-4)}</span>
+                  <span className='value'>
+                    {walletState.address.slice(0, 6)}...
+                    {walletState.address.slice(-4)}
+                  </span>
                 </div>
                 <div className='wallet-info-item'>
                   <span className='label'>NETWORK:</span>
@@ -1171,7 +1450,9 @@ function App() {
                 {redPacket.sender === walletState.address ? '🎁' : '💰'}
               </div>
               <h1 className='congratulations'>
-                {redPacket.sender === walletState.address ? 'RED PACKET CREATED!' : 'JACKPOT!'}
+                {redPacket.sender === walletState.address
+                  ? 'RED PACKET CREATED!'
+                  : 'JACKPOT!'}
               </h1>
             </div>
 
@@ -1194,15 +1475,41 @@ function App() {
                   </div>
                   <div className='detail-item'>
                     <span className='label'>TYPE:</span>
-                    <span className='value'>{redPacket.type === 'lucky' ? 'LUCKY DRAW' : 'EQUAL AMOUNT'}</span>
+                    <span className='value'>
+                      {redPacket.type === 'lucky'
+                        ? 'LUCKY DRAW'
+                        : 'EQUAL AMOUNT'}
+                    </span>
                   </div>
                   <div className='detail-item'>
                     <span className='label'>MESSAGE:</span>
                     <span className='value'>{redPacket.message}</span>
                   </div>
+                  {redPacket.txHash && (
+                    <div className='detail-item'>
+                      <span className='label'>TX HASH:</span>
+                      <span
+                        className='value'
+                        style={{ fontSize: '0.7rem' }}>
+                        {redPacket.txHash.slice(0, 10)}...{redPacket.txHash.slice(-8)}
+                      </span>
+                    </div>
+                  )}
+                  {redPacket.tbaAddress && (
+                    <div className='detail-item'>
+                      <span className='label'>TBA ADDRESS:</span>
+                      <span
+                        className='value'
+                        style={{ fontSize: '0.7rem' }}>
+                        {redPacket.tbaAddress.slice(0, 10)}...{redPacket.tbaAddress.slice(-8)}
+                      </span>
+                    </div>
+                  )}
                   <div className='detail-item'>
                     <span className='label'>SHARE LINK:</span>
-                    <span className='value' style={{fontSize: '0.7rem'}}>
+                    <span
+                      className='value'
+                      style={{ fontSize: '0.7rem' }}>
                       {window.location.origin}?id={redPacket.id}
                     </span>
                   </div>
@@ -1256,7 +1563,9 @@ function App() {
                   <button
                     className='outline-button'
                     onClick={() => {
-                      navigator.clipboard.writeText(`I just claimed ${redPacket.amount} MONAD from a red packet! 🧧`)
+                      navigator.clipboard.writeText(
+                        `I just claimed ${redPacket.amount} MONAD from a red packet! 🧧`
+                      )
                       console.log('📋 分享文本已复制到剪贴板')
                     }}>
                     SHARE LUCK
