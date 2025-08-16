@@ -24,11 +24,4 @@ interface IMonaPacketAccount {
         bytes calldata data,
         uint8 operation
     ) external payable returns (bytes memory);
-
-    event OpenRedPacket(
-        address indexed recipient,
-        address indexed erc20,
-        uint256 amount,
-        uint256 value
-    );
 }

@@ -23,8 +23,5 @@ contract MonaPacketNFT is ERC721, Ownable, IMonaPacketNFT {
 
         tokenId = _nextTokenId++;
         _safeMint(to, tokenId);
-
-        // Assuming your interface requires this event
-        emit MonaPacketNFTMinted(to, tokenId);
     }
 }
