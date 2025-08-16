@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import './App.css'
 
-// 扩展Window接口以支持ethereum
+// Extend Window interface to support ethereum
 declare global {
   interface Window {
     ethereum?: any
@@ -39,7 +39,7 @@ interface WalletState {
   networkName: string
 }
 
-// Monad网络配置
+// Monad network configuration
 const MONAD_NETWORK = {
   chainId: '0x15B3', // 5555 in hex
   chainName: 'Monad Testnet',
@@ -52,7 +52,7 @@ const MONAD_NETWORK = {
   blockExplorerUrls: ['https://testnet-explorer.monad.xyz'],
 }
 
-// 智能合约配置
+// Smart contract configuration
 const MONAD_PACKET_CONTRACT = {
   address: '0xd89C5C99B854470a3ea68b533441898Dee74B681',
   abi: [
@@ -150,10 +150,10 @@ function App() {
   const [isConnecting, setIsConnecting] = useState(false)
   const [walletError, setWalletError] = useState<string>('')
 
-  // 创建红包相关状态
+  // Create red packet related state
   const [createForm, setCreateForm] = useState<CreateRedPacketForm>({
     recipient: '',
-    erc20: '0x0000000000000000000000000000000000000000', // ETH地址，表示使用原生代币
+    erc20: '0x0000000000000000000000000000000000000000', // ETH address, indicates using native token
     amount: 10,
     count: 5,
     message: 'HAPPY NEW YEAR',
@@ -269,13 +269,13 @@ function App() {
     }
   }
 
-  // 钱包相关函数
+  // Wallet related functions
   const checkWalletConnection = async () => {
     console.log('🔍 检查钱包连接状态...')
 
     if (typeof window.ethereum === 'undefined') {
       console.log('❌ 未检测到MetaMask')
-      setWalletError('请安装MetaMask钱包')
+      setWalletError('Please install MetaMask wallet')
       return
     }
 
@@ -316,7 +316,7 @@ function App() {
       }
     } catch (error) {
       console.error('❌ 检查钱包连接失败:', error)
-      setWalletError('检查钱包连接失败')
+      setWalletError('Failed to check wallet connection')
     }
   }
 
@@ -356,7 +356,7 @@ function App() {
 
     if (typeof window.ethereum === 'undefined') {
       console.log('❌ 未检测到MetaMask')
-      setWalletError('请安装MetaMask钱包')
+      setWalletError('Please install MetaMask wallet')
       return
     }
 
@@ -402,14 +402,14 @@ function App() {
       console.error('❌ 连接钱包失败:', error)
 
       if (error.code === 4001) {
-        setWalletError('用户拒绝连接钱包')
-        console.log('👤 用户拒绝了连接请求')
+        setWalletError('User rejected wallet connection')
+        console.log('👤 User rejected connection request')
       } else if (error.code === -32002) {
-        setWalletError('MetaMask已有连接请求待处理')
-        console.log('⏳ MetaMask已有连接请求待处理')
+        setWalletError('MetaMask connection request already pending')
+        console.log('⏳ MetaMask connection request already pending')
       } else {
-        setWalletError(`连接失败: ${error.message || '未知错误'}`)
-        console.log('💥 连接失败:', error.message)
+        setWalletError(`Connection failed: ${error.message || 'Unknown error'}`)
+        console.log('💥 Connection failed:', error.message)
       }
     } finally {
       setIsConnecting(false)
@@ -437,10 +437,10 @@ function App() {
         await addMonadNetwork()
       } else if (error.code === 4001) {
         console.log('👤 用户拒绝了网络切换')
-        setWalletError('用户拒绝切换网络')
+        setWalletError('User rejected network switch')
       } else {
-        console.log('💥 切换网络失败:', error.message)
-        setWalletError(`切换网络失败: ${error.message}`)
+        console.log('💥 Network switch failed:', error.message)
+        setWalletError(`Network switch failed: ${error.message}`)
       }
     }
   }
@@ -462,11 +462,11 @@ function App() {
       console.error('❌ 添加网络失败:', error)
 
       if (error.code === 4001) {
-        setWalletError('用户拒绝添加Monad网络')
-        console.log('👤 用户拒绝了添加网络')
+        setWalletError('User rejected adding Monad network')
+        console.log('👤 User rejected adding network')
       } else {
-        setWalletError(`添加网络失败: ${error.message}`)
-        console.log('💥 添加网络失败:', error.message)
+        setWalletError(`Failed to add network: ${error.message}`)
+        console.log('💥 Failed to add network:', error.message)
       }
     }
   }
@@ -623,25 +623,25 @@ function App() {
     setParticles([])
   }
 
-  // 创建红包功能
+  // Create red packet function
   const createRedPacket = async () => {
     console.log('🎁 开始创建红包...', createForm)
 
     if (!walletState.isConnected) {
       console.log('❌ 钱包未连接')
-      setWalletError('请先连接钱包')
+      setWalletError('Please connect wallet first')
       return
     }
 
     if (createForm.amount <= 0) {
-      console.log('❌ 红包参数无效')
-      setWalletError('请输入有效的金额')
+      console.log('❌ Invalid red packet parameters')
+      setWalletError('Please enter a valid amount')
       return
     }
 
     if (!createForm.recipient || createForm.recipient.length !== 42) {
-      console.log('❌ 接收者地址无效')
-      setWalletError('请输入有效的接收者地址')
+      console.log('❌ Invalid recipient address')
+      setWalletError('Please enter a valid recipient address')
       return
     }
 
@@ -657,7 +657,7 @@ function App() {
 
       if (currentBalance < createForm.amount) {
         console.log('❌ 余额不足')
-        setWalletError(`余额不足，当前余额: ${walletState.balance} MONAD`)
+        setWalletError(`Insufficient balance, current: ${walletState.balance} MONAD`)
         return
       }
 
@@ -822,11 +822,11 @@ function App() {
       }
 
       if (!receipt) {
-        throw new Error('交易确认超时，请稍后查看交易状态')
+        throw new Error('Transaction confirmation timeout, please check status later')
       }
 
       if (receipt.status === '0x0') {
-        throw new Error('交易失败，请检查参数和余额')
+        throw new Error('Transaction failed, please check parameters and balance')
       }
 
       console.log('✅ 交易确认成功:', receipt)
@@ -876,31 +876,31 @@ function App() {
 
       // 详细的错误处理
       if (error.code === 4001) {
-        setWalletError('用户取消了交易')
+        setWalletError('User cancelled transaction')
       } else if (error.code === -32603) {
-        setWalletError('内部JSON-RPC错误，请检查网络连接和参数')
+        setWalletError('Internal JSON-RPC error, please check network connection and parameters')
       } else if (error.code === -32602) {
-        setWalletError('无效的方法参数')
+        setWalletError('Invalid method parameters')
       } else if (error.code === -32601) {
-        setWalletError('方法不存在')
+        setWalletError('Method does not exist')
       } else if (error.code === -32600) {
-        setWalletError('无效的请求')
+        setWalletError('Invalid request')
       } else if (error.message?.includes('insufficient funds')) {
-        setWalletError('余额不足，请检查账户余额')
+        setWalletError('Insufficient balance, please check account balance')
       } else if (error.message?.includes('gas')) {
-        setWalletError('Gas费用不足，请增加Gas限制')
+        setWalletError('Insufficient gas fee, please increase gas limit')
       } else if (error.message?.includes('network')) {
-        setWalletError('网络连接错误，请检查网络设置')
+        setWalletError('Network connection error, please check network settings')
       } else if (error.message?.includes('nonce')) {
-        setWalletError('Nonce错误，请重试')
+        setWalletError('Nonce error, please retry')
       } else {
-        setWalletError(`创建失败: ${error.message || '未知错误'}`)
+        setWalletError(`Creation failed: ${error.message || 'Unknown error'}`)
       }
 
       // 如果是RPC错误，建议用户检查网络
       if (error.code && error.code < -32000) {
         console.log('💡 建议：检查网络连接，确认RPC节点正常工作')
-        setWalletError((prev) => prev + ' (建议检查网络连接)')
+        setWalletError((prev) => prev + ' (Suggest checking network connection)')
       }
     } finally {
       setIsCreating(false)
@@ -940,13 +940,13 @@ function App() {
 
     if (!currentRedPacketId) {
       console.log('❌ 红包ID无效')
-      setWalletError('红包链接无效')
+      setWalletError('Invalid red packet link')
       return
     }
 
     if (!walletState.isConnected) {
-      console.log('❌ 钱包未连接')
-      setWalletError('请先连接钱包')
+      console.log('❌ Wallet not connected')
+      setWalletError('Please connect wallet first')
       return
     }
 
@@ -994,7 +994,7 @@ function App() {
       vibrate([200, 100, 200])
     } catch (error: any) {
       console.error('❌ 领取红包失败:', error)
-      setWalletError(`领取失败: ${error.message || '未知错误'}`)
+      setWalletError(`Claim failed: ${error.message || 'Unknown error'}`)
     } finally {
       setIsAnimating(false)
     }
@@ -1010,30 +1010,31 @@ function App() {
 
   return (
     <div className='app-container'>
-      {/* 音效控制按钮 */}
+      {/* Sound Control Button */}
       <button
         className='sound-toggle'
         onClick={toggleSound}
-        title={soundEnabled ? '关闭音效' : '开启音效'}>
+        title={soundEnabled ? 'Turn off sound' : 'Turn on sound'}>
         {soundEnabled ? '🔊' : '🔇'}
       </button>
 
-      {/* 背景粒子效果 */}
+      {/* Background Particle Effect - Rain Drop Effect */}
       <div className='background-particles'>
-        {Array.from({ length: 50 }).map((_, i) => (
+        {Array.from({ length: 30 }).map((_, i) => (
           <div
             key={i}
             className='particle'
             style={{
               left: `${Math.random() * 100}%`,
+              top: '-20px',
               animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${3 + Math.random() * 2}s`,
+              animationDuration: `${2 + Math.random() * 2}s`,
             }}
           />
         ))}
       </div>
 
-      {/* 庆祝粒子 */}
+      {/* Celebration Particles */}
       {particles.map((particle) => (
         <div
           key={particle.id}
@@ -1046,7 +1047,7 @@ function App() {
       ))}
 
       <div className='content-container'>
-        {/* 步骤0: 连接钱包 */}
+        {/* Step 0: Connect Wallet */}
         {step === 'wallet' && (
           <div
             className={`step-container ${
@@ -1081,13 +1082,13 @@ function App() {
           </div>
         )}
 
-        {/* 主页 */}
+        {/* Home Page */}
         {step === 'home' && (
           <div
             className={`step-container ${
               isAnimating ? 'animate-out' : 'animate-in'
             }`}>
-            {/* 钱包状态显示 */}
+            {/* Wallet Status Display */}
             {walletState.isConnected && (
               <div className='wallet-status-display'>
                 <div className='wallet-info-item'>
@@ -1131,7 +1132,7 @@ function App() {
               </button>
             </div>
 
-            {/* 已创建的红包列表 */}
+            {/* Created Red Packets List */}
             {createdRedPackets.length > 0 && (
               <div className='created-packets-list'>
                 <h3>MY RED PACKETS</h3>
@@ -1162,7 +1163,7 @@ function App() {
           </div>
         )}
 
-        {/* 创建红包页面 */}
+        {/* Create Red Packet Page */}
         {step === 'create' && (
           <div
             className={`step-container ${
@@ -1300,13 +1301,13 @@ function App() {
           </div>
         )}
 
-        {/* 通过链接领取红包 */}
+        {/* Claim Red Packet via Link */}
         {step === 'claim' && (
           <div
             className={`step-container ${
               isAnimating ? 'animate-out' : 'animate-in'
             }`}>
-            {/* 钱包状态显示 */}
+            {/* Wallet Status Display */}
             {walletState.isConnected && (
               <div className='wallet-status-display'>
                 <div className='wallet-info-item'>
@@ -1355,13 +1356,13 @@ function App() {
           </div>
         )}
 
-        {/* 步骤1: 发现红包 */}
+        {/* Step 1: Discover Red Packet */}
         {step === 'discover' && (
           <div
             className={`step-container ${
               isAnimating ? 'animate-out' : 'animate-in'
             }`}>
-            {/* 钱包状态显示 */}
+            {/* Wallet Status Display */}
             {walletState.isConnected && (
               <div className='wallet-status-display'>
                 <div className='wallet-info-item'>
@@ -1407,7 +1408,7 @@ function App() {
           </div>
         )}
 
-        {/* 步骤2: 领取红包 */}
+        {/* Step 2: Receive Red Packet */}
         {step === 'receive' && (
           <div
             className={`step-container ${
@@ -1444,7 +1445,7 @@ function App() {
           </div>
         )}
 
-        {/* 步骤3: 拆红包 */}
+        {/* Step 3: Open Red Packet */}
         {step === 'open' && (
           <div
             className={`step-container ${
@@ -1482,7 +1483,7 @@ function App() {
           </div>
         )}
 
-        {/* 步骤4: 展示结果 */}
+        {/* Step 4: Show Results */}
         {step === 'result' && redPacket && (
           <div
             className={`step-container ${
