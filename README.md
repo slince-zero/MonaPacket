@@ -1,64 +1,170 @@
-# MonaPacket
+# 🧧 MonaPacket - Decentralized Red Packet System
 
-本仓库包含基于 Foundry 的 MonaPacket 合约与脚本，当前实现以 `contracts` 目录为主：
-- 核心合约：`MonaPacket.sol`、`MonaPacketNFT.sol`、`MonaPacketAccount.sol`、`ERC6551Registry.sol`
-- 测试：位于 `contracts/test/`，覆盖创建、TBA 执行、注册表分支、部署脚本写文件等
-- 部署脚本：`contracts/script/MonaPacket.s.sol`，将部署信息写入 `contracts/deployments/MonaPacket.json`
+A complete decentralized red packet (hongbao) application built on the Monad blockchain, featuring smart contracts with ERC-6551 Token Bound Accounts (TBA) and a Neo-brutalism styled frontend.
 
-### 部署脚本
+## 🌟 Features
 
-```bash
-cd contracts
-forge build
-export PRIVATE_KEY=<hex_private_key>
-forge script script/MonaPacket.s.sol:MonaPacketScript \
-  --broadcast --rpc-url <your_rpc_url>
+### Smart Contract Features
+- 🎁 **Token Bound Accounts**: Each red packet is an NFT with its own wallet (ERC-6551)
+- 💰 **Multi-Token Support**: Native MON tokens and ERC20 tokens
+- 🔐 **Secure Architecture**: Foundry-based contracts with comprehensive testing
+- 📝 **EIP-2612 Permit**: Gasless ERC20 approvals for better UX
+
+### Frontend Features
+- 🎨 **Neo-brutalism Design**: Bold, modern UI with striking visual effects
+- 🌧️ **Particle Animations**: Beautiful rain-drop effects and celebrations
+- 📱 **Mobile Responsive**: Optimized for all devices
+- 🔊 **Interactive Feedback**: Sound effects and haptic feedback
+- 🔗 **Easy Sharing**: Generate shareable links for red packets
+
+## 📁 Project Structure
+
+```
+open_build/
+├── contracts/              # Smart contracts (Foundry)
+│   ├── src/               # Contract source code
+│   ├── test/              # Contract tests
+│   ├── script/            # Deployment scripts
+│   └── deployments/       # Deployment artifacts
+└── front/                 # Frontend application
+    ├── src/               # React TypeScript source
+    ├── public/            # Static assets
+    └── contract-debug.html # Contract debugging tool
 ```
 
-运行后会在 `contracts/deployments/MonaPacket.json` 生成部署信息文件。
+## 🚀 Quick Start
 
-## 系统架构 (System Architecture)
+### Prerequisites
+
+- **Node.js 18+** and npm/yarn
+- **Foundry** for smart contract development
+- **MetaMask** wallet extension
+- **Monad testnet** setup
+
+### Smart Contract Deployment
+
+1. **Install Foundry dependencies**
+   ```bash
+   cd contracts
+   forge install
+   forge build
+   ```
+
+2. **Deploy contracts**
+   ```bash
+   export PRIVATE_KEY=<your_hex_private_key>
+   forge script script/MonaPacket.s.sol:MonaPacketScript \
+     --broadcast --rpc-url https://testnet-rpc.monad.xyz
+   ```
+
+3. **Deployment info** will be saved to `contracts/deployments/MonaPacket.json`
+
+### Frontend Setup
+
+1. **Install dependencies**
+   ```bash
+   cd front
+   npm install
+   ```
+
+2. **Start development server**
+   ```bash
+   npm run dev
+   ```
+
+3. **Open application**
+   ```
+   http://localhost:5173
+   ```
+
+## 🌐 Network Configuration
+
+### Monad Testnet
+- **Chain ID**: 5555 (0x15B3)
+- **RPC URL**: https://testnet-rpc.monad.xyz
+- **Currency**: MON
+- **Explorer**: https://testnet.monadexplorer.com
+- **Contract**: `0xd89C5C99B854470a3ea68b533441898Dee74B681`
+
+## 🎮 How to Use
+
+### Creating a Red Packet
+
+1. **Connect Wallet**: Click "CONNECT METAMASK" and approve connection
+2. **Create**: Click "CREATE RED PACKET" from home screen
+3. **Fill Details**:
+   - Recipient address (42-character Ethereum address)
+   - Amount in MON tokens
+   - Optional message
+4. **Confirm**: Review and sign transaction in MetaMask
+5. **Share**: Copy generated link to share with recipients
+
+### Claiming a Red Packet
+
+1. **Open Link**: Click on shared red packet link
+2. **Connect Wallet**: Connect MetaMask if not already connected
+3. **Claim**: Follow interactive steps to claim reward
+4. **Celebrate**: Enjoy particle effects and receive tokens!
+
+## 🏗️ System Architecture
 
 ```mermaid
 graph TD
-    subgraph "MonoPacket 核心合约"
-        A["MonoPacket.sol (主入口合约)"]
-        B["MonoPacketNFT.sol (ERC721 合约)"]
-        C["MonoPacketAccount.sol (TBA 实现合约)"]
+    subgraph "Frontend Application"
+        F["React + TypeScript Frontend"]
+        W["MetaMask Wallet Integration"]
+        UI["Neo-brutalism UI"]
     end
 
-    subgraph "外部依赖 (标准组件)"
-        D["ERC6551Registry.sol (官方注册表)"]
+    subgraph "MonaPacket Core Contracts"
+        A["MonaPacket.sol (Main Entry)"]
+        B["MonaPacketNFT.sol (ERC721)"]
+        C["MonaPacketAccount.sol (TBA Implementation)"]
     end
 
-    subgraph "用户与最终产物"
-        U["👤 用户 (EOA)"]
-        TBA["🧧 红包钱包 (TBA)"]
+    subgraph "External Dependencies"
+        D["ERC6551Registry.sol (Official Registry)"]
+        M["Monad Blockchain"]
     end
 
-    U --"1. 调用 createWithNativeToken()/createWithERC20()"--> A
+    subgraph "User & Final Products"
+        U["👤 User (EOA)"]
+        TBA["🧧 Red Packet Wallet (TBA)"]
+    end
+
+    F --> W
+    W --> U
+    U --"1. Call createWithNativeToken()/createWithERC20()"--> A
     A --"2. mint()"--> B
     A --"3. createAccount()"--> D
-    D --"使用...作为模板"--> C
-    D --"4. 创建"--> TBA
-    A --"5. 注入资金"--> TBA
-    
-    B --"🔗 拥有 (Owns)"--> TBA
-    U --"👤 成为所有者"--> B
+    D --"Uses as template"--> C
+    D --"4. Creates"--> TBA
+    A --"5. Inject funds"--> TBA
 
-    style A fill:#f9f,stroke:#333,stroke-width:2px
-    style B fill:#ccf,stroke:#333,stroke-width:2px
-    style C fill:#9cf,stroke:#333,stroke-width:2px
-    style TBA fill:#f66,stroke:#333,stroke-width:4px
+    B --"🔗 Owns"--> TBA
+    U --"👤 Becomes owner"--> B
+
+    A --> M
+    B --> M
+    C --> M
+    D --> M
+
+    style A fill:#01db83,stroke:#000,stroke-width:3px
+    style B fill:#FFD641,stroke:#000,stroke-width:3px
+    style C fill:#FF6B6B,stroke:#000,stroke-width:3px
+    style TBA fill:#f66,stroke:#000,stroke-width:4px
+    style F fill:#9cf,stroke:#000,stroke-width:2px
 ```
 
-## 智能合约接口文档 (Smart Contract API)
+## 📋 Smart Contract API
 
-IMonaPacket（主入口合约），用户交互的中心枢纽。
+### IMonaPacket (Main Entry Contract)
 
-```
+The central hub for user interactions with the red packet system.
+
+```solidity
 interface IMonaPacket {
-    // 事件：红包创建
+    // Event: Red packet creation
     event MonaPacketCreated(
         address indexed tba,
         address indexed recipient,
@@ -67,18 +173,18 @@ interface IMonaPacket {
         uint256 amount
     );
 
-    // 使用原生币创建红包
+    // Create red packet with native token
     function createWithNativeToken(address recipient)
         external
         payable
         returns (address tba);
 
-    // 使用 ERC20 创建红包
+    // Create red packet with ERC20 token
     function createWithERC20(address recipient, address erc20, uint256 amount)
         external
         returns (address tba);
 
-    // 使用 EIP-2612 Permit 创建红包
+    // Create red packet with EIP-2612 Permit (gasless)
     function createWithERC20Permit(
         address recipient,
         address erc20,
@@ -89,10 +195,10 @@ interface IMonaPacket {
         bytes32 s
     ) external returns (address tba);
 
-    // 预测/查询某 tokenId 对应的 TBA 地址
+    // Predict/query TBA address for given tokenId
     function getAccount(uint256 tokenId) external view returns (address);
 
-    // 管理：更新后续 TBA 的实现地址
+    // Admin: Update TBA implementation address
     function setAccountImplementation(address newImplementation) external;
 }
 ```
