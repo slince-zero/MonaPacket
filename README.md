@@ -36,7 +36,7 @@ graph TD
         TBA["🧧 红包钱包 (TBA)"]
     end
 
-    U --"1. 调用 createRedPacket()"--> A
+    U --"1. 调用 createWithNativeToken()/createWithERC20()"--> A
     A --"2. mint()"--> B
     A --"3. createAccount()"--> D
     D --"使用...作为模板"--> C
@@ -54,75 +54,90 @@ graph TD
 
 ## 智能合约接口文档 (Smart Contract API)
 
-IMonoPacket (主入口合约)，用户交互的中心枢纽。
+IMonaPacket（主入口合约），用户交互的中心枢纽。
 
 ```
-interface IMonoPacket {
-    /**
-     * @dev 当一个红包被成功创建时触发。前端可以监听此事件来更新 UI。
-     * @param tokenId 新铸造的 MonoPacketNFT 的 ID。
-     * @param nftContract NFT 合约地址。
-     * @param recipient 红包 NFT 的接收者地址。
-     * @param tbaAddress 为该 NFT 创建的 TBA 钱包地址。
-     * @param amount 存入该红包的金额 (in wei)。
-     */
-    event RedPacketCreated(
-        uint256 indexed tokenId,
-        address indexed nftContract,
+interface IMonaPacket {
+    // 事件：红包创建
+    event MonaPacketCreated(
+        address indexed tba,
         address indexed recipient,
-        address tbaAddress,
+        uint256 indexed tokenId,
+        address token,
         uint256 amount
     );
 
-    /**
-     * @dev 创建一个红包。用户调用此函数，并通过 `payable` 关键字附带 ETH 作为红包资金。
-     * @param recipient 红包 NFT 的接收者。
-     * @param tokenURI NFT 的元数据 URI (例如，指向一个包含祝福语和图片的 IPFS JSON 文件)。
-     * @return tbaAddress 新创建的 TBA 钱包地址。
-     */
-    function createRedPacket(
+    // 使用原生币创建红包
+    function createWithNativeToken(address recipient)
+        external
+        payable
+        returns (address tba);
+
+    // 使用 ERC20 创建红包
+    function createWithERC20(address recipient, address erc20, uint256 amount)
+        external
+        returns (address tba);
+
+    // 使用 EIP-2612 Permit 创建红包
+    function createWithERC20Permit(
         address recipient,
-        string calldata tokenURI
-    ) external payable returns (address tbaAddress);
+        address erc20,
+        uint256 amount,
+        uint256 deadline,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (address tba);
+
+    // 预测/查询某 tokenId 对应的 TBA 地址
+    function getAccount(uint256 tokenId) external view returns (address);
+
+    // 管理：更新后续 TBA 的实现地址
+    function setAccountImplementation(address newImplementation) external;
 }
 ```
 
-IMonoPacketNFT (NFT 合约)，代表“红包封皮”的 ERC-721 合约。
+IMonaPacketNFT（NFT 合约），代表“红包封皮”的 ERC-721 合约。
 
 ```
-interface IMonoPacketNFT is IERC721 {
-    /**
-     * @dev 铸造一个新的红包 NFT。此函数应被设置为只能由主入口合约 (MonoPacket.sol) 调用。
-     * @param to NFT 的接收者地址。
-     * @param tokenURI NFT 的元数据 URI。
-     * @return tokenId 新铸造的 NFT 的 ID。
-     */
-    function mint(address to, string calldata tokenURI) external returns (uint256);
+interface IMonaPacketNFT is IERC721 {
+    // 仅 MonaPacket 合约可调用
+    function mint(address to) external returns (uint256 tokenId);
 }
 ```
 
-IMonoPacketAccount (红包钱包合约)，TBA 的具体实现，定义了红包钱包的行为。
+IMonaPacketAccount（红包钱包合约），TBA 的具体实现。
 
 ```
-interface IMonoPacketAccount {
-    /**
-     * @dev 允许红包所有者 (即 NFT 的持有者) 从红包钱包中提取资金。
-     * 函数内部必须有权限校验，确保调用者是该 TBA 对应 NFT 的所有者。
-     * @param to 资金接收地址。
-     * @param amount 要提取的金额。
-     */
-    function withdraw(address payable to, uint256 amount) external;
-
-    /**
-     * @dev 使合约能够接收 ETH。
-     */
+interface IMonaPacketAccount {
+    // 接收原生币
     receive() external payable;
 
-    // --- 兼容 ERC-6551 标准所需的核心函数 ---
+    // 返回绑定的 NFT 元数据
+    function token()
+        external
+        view
+        returns (uint256 chainId, address tokenContract, uint256 tokenId);
 
-    function execute(address to, uint256 value, bytes calldata data, uint256 operation) external payable returns (bytes memory);
-    function token() external view returns (uint256 chainId, address tokenContract, uint256 tokenId);
+    // 执行计数（每次 execute 自增）
+    function state() external view returns (uint256);
+
+    // 当前所有者（等于绑定 NFT 的 owner）
     function owner() external view returns (address);
+
+    // ERC-6551 签名者校验接口
+    function isValidSigner(address signer, bytes calldata context)
+        external
+        view
+        returns (bytes4 magicValue);
+
+    // 仅支持 operation=0 的调用执行
+    function execute(
+        address to,
+        uint256 value,
+        bytes calldata data,
+        uint8 operation
+    ) external payable returns (bytes memory);
 }
 ```
 
