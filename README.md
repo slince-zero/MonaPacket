@@ -1,5 +1,22 @@
 # MonaPacket
 
+本仓库包含基于 Foundry 的 MonaPacket 合约与脚本，当前实现以 `contracts` 目录为主：
+- 核心合约：`MonaPacket.sol`、`MonaPacketNFT.sol`、`MonaPacketAccount.sol`、`ERC6551Registry.sol`
+- 测试：位于 `contracts/test/`，覆盖创建、TBA 执行、注册表分支、部署脚本写文件等
+- 部署脚本：`contracts/script/MonaPacket.s.sol`，将部署信息写入 `contracts/deployments/MonaPacket.json`
+
+### 部署脚本
+
+```bash
+cd contracts
+forge build
+export PRIVATE_KEY=<hex_private_key>
+forge script script/MonaPacket.s.sol:MonaPacketScript \
+  --broadcast --rpc-url <your_rpc_url>
+```
+
+运行后会在 `contracts/deployments/MonaPacket.json` 生成部署信息文件。
+
 ## 系统架构 (System Architecture)
 
 ```mermaid
