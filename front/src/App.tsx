@@ -57,47 +57,70 @@ const MONAD_PACKET_CONTRACT = {
   address: '0xd89C5C99B854470a3ea68b533441898Dee74B681',
   abi: [
     {
-      "inputs": [
-        {"internalType": "address", "name": "_recipient", "type": "address"},
-        {"internalType": "address", "name": "_erc20", "type": "address"},
-        {"internalType": "uint256", "name": "_amount", "type": "uint256"}
+      inputs: [
+        { internalType: 'address', name: '_recipient', type: 'address' },
+        { internalType: 'address', name: '_erc20', type: 'address' },
+        { internalType: 'uint256', name: '_amount', type: 'uint256' },
       ],
-      "name": "createWithERC20",
-      "outputs": [{"internalType": "address", "name": "tba", "type": "address"}],
-      "stateMutability": "nonpayable",
-      "type": "function"
+      name: 'createWithERC20',
+      outputs: [{ internalType: 'address', name: 'tba', type: 'address' }],
+      stateMutability: 'nonpayable',
+      type: 'function',
     },
     {
-      "inputs": [
-        {"internalType": "address", "name": "_recipient", "type": "address"}
+      inputs: [
+        { internalType: 'address', name: '_recipient', type: 'address' },
       ],
-      "name": "createWithNativeToken",
-      "outputs": [{"internalType": "address", "name": "tba", "type": "address"}],
-      "stateMutability": "payable",
-      "type": "function"
+      name: 'createWithNativeToken',
+      outputs: [{ internalType: 'address', name: 'tba', type: 'address' }],
+      stateMutability: 'payable',
+      type: 'function',
     },
     {
-      "inputs": [
-        {"internalType": "uint256", "name": "_tokenId", "type": "uint256"}
-      ],
-      "name": "getAccount",
-      "outputs": [{"internalType": "address", "name": "", "type": "address"}],
-      "stateMutability": "view",
-      "type": "function"
+      inputs: [{ internalType: 'uint256', name: '_tokenId', type: 'uint256' }],
+      name: 'getAccount',
+      outputs: [{ internalType: 'address', name: '', type: 'address' }],
+      stateMutability: 'view',
+      type: 'function',
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {"indexed": true, "internalType": "address", "name": "tba", "type": "address"},
-        {"indexed": true, "internalType": "address", "name": "recipient", "type": "address"},
-        {"indexed": true, "internalType": "uint256", "name": "tokenId", "type": "uint256"},
-        {"indexed": false, "internalType": "address", "name": "token", "type": "address"},
-        {"indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256"}
+      anonymous: false,
+      inputs: [
+        {
+          indexed: true,
+          internalType: 'address',
+          name: 'tba',
+          type: 'address',
+        },
+        {
+          indexed: true,
+          internalType: 'address',
+          name: 'recipient',
+          type: 'address',
+        },
+        {
+          indexed: true,
+          internalType: 'uint256',
+          name: 'tokenId',
+          type: 'uint256',
+        },
+        {
+          indexed: false,
+          internalType: 'address',
+          name: 'token',
+          type: 'address',
+        },
+        {
+          indexed: false,
+          internalType: 'uint256',
+          name: 'amount',
+          type: 'uint256',
+        },
       ],
-      "name": "MonaPacketCreated",
-      "type": "event"
-    }
-  ]
+      name: 'MonaPacketCreated',
+      type: 'event',
+    },
+  ],
 }
 
 function App() {
@@ -645,8 +668,11 @@ function App() {
       )
 
       // 准备交易参数
-      const isNativeToken = createForm.erc20 === '0x0000000000000000000000000000000000000000'
-      const amountInWei = BigInt(Math.floor(createForm.amount * Math.pow(10, 18))).toString()
+      const isNativeToken =
+        createForm.erc20 === '0x0000000000000000000000000000000000000000'
+      const amountInWei = BigInt(
+        Math.floor(createForm.amount * Math.pow(10, 18))
+      ).toString()
 
       let txHash: string
 
@@ -658,7 +684,10 @@ function App() {
 
           // 编码函数调用 createWithNativeToken(address)
           const functionSelector = '0x8b7afe2e' // createWithNativeToken(address) 的函数选择器
-          const paddedRecipient = createForm.recipient.toLowerCase().replace('0x', '').padStart(64, '0')
+          const paddedRecipient = createForm.recipient
+            .toLowerCase()
+            .replace('0x', '')
+            .padStart(64, '0')
           const encodedData = functionSelector + paddedRecipient
 
           console.log(`📝 编码数据: ${encodedData}`)
@@ -668,12 +697,14 @@ function App() {
           try {
             gasEstimate = await window.ethereum.request({
               method: 'eth_estimateGas',
-              params: [{
-                to: MONAD_PACKET_CONTRACT.address,
-                from: walletState.address,
-                value: '0x' + BigInt(amountInWei).toString(16),
-                data: encodedData
-              }]
+              params: [
+                {
+                  to: MONAD_PACKET_CONTRACT.address,
+                  from: walletState.address,
+                  value: '0x' + BigInt(amountInWei).toString(16),
+                  data: encodedData,
+                },
+              ],
             })
             console.log(`📝 Gas估算: ${gasEstimate}`)
           } catch (gasError) {
@@ -686,37 +717,47 @@ function App() {
             from: walletState.address,
             value: '0x' + BigInt(amountInWei).toString(16),
             data: encodedData,
-            gas: gasEstimate
+            gas: gasEstimate,
           }
 
           console.log('📝 交易参数:', txParams)
 
           txHash = await window.ethereum.request({
             method: 'eth_sendTransaction',
-            params: [txParams]
+            params: [txParams],
           })
-
         } else {
           // 使用ERC20代币创建红包
           console.log('🔗 调用 createWithERC20...')
 
           // 编码函数调用 createWithERC20(address,address,uint256)
           const functionSelector = '0x123456789' // 需要实际的函数选择器
-          const paddedRecipient = createForm.recipient.toLowerCase().replace('0x', '').padStart(64, '0')
-          const paddedErc20 = createForm.erc20.toLowerCase().replace('0x', '').padStart(64, '0')
-          const paddedAmount = BigInt(amountInWei).toString(16).padStart(64, '0')
-          const encodedData = functionSelector + paddedRecipient + paddedErc20 + paddedAmount
+          const paddedRecipient = createForm.recipient
+            .toLowerCase()
+            .replace('0x', '')
+            .padStart(64, '0')
+          const paddedErc20 = createForm.erc20
+            .toLowerCase()
+            .replace('0x', '')
+            .padStart(64, '0')
+          const paddedAmount = BigInt(amountInWei)
+            .toString(16)
+            .padStart(64, '0')
+          const encodedData =
+            functionSelector + paddedRecipient + paddedErc20 + paddedAmount
 
           // 先估算Gas
           let gasEstimate
           try {
             gasEstimate = await window.ethereum.request({
               method: 'eth_estimateGas',
-              params: [{
-                to: MONAD_PACKET_CONTRACT.address,
-                from: walletState.address,
-                data: encodedData
-              }]
+              params: [
+                {
+                  to: MONAD_PACKET_CONTRACT.address,
+                  from: walletState.address,
+                  data: encodedData,
+                },
+              ],
             })
             console.log(`📝 Gas估算: ${gasEstimate}`)
           } catch (gasError) {
@@ -728,12 +769,12 @@ function App() {
             to: MONAD_PACKET_CONTRACT.address,
             from: walletState.address,
             data: encodedData,
-            gas: gasEstimate
+            gas: gasEstimate,
           }
 
           txHash = await window.ethereum.request({
             method: 'eth_sendTransaction',
-            params: [txParams]
+            params: [txParams],
           })
         }
       } catch (rpcError: any) {
@@ -762,12 +803,12 @@ function App() {
       const maxAttempts = 30
 
       while (!receipt && attempts < maxAttempts) {
-        await new Promise(resolve => setTimeout(resolve, 2000))
+        await new Promise((resolve) => setTimeout(resolve, 2000))
 
         try {
           receipt = await window.ethereum.request({
             method: 'eth_getTransactionReceipt',
-            params: [txHash]
+            params: [txHash],
           })
           attempts++
 
@@ -791,7 +832,9 @@ function App() {
       console.log('✅ 交易确认成功:', receipt)
 
       // 从交易回执中解析TBA地址（简化处理）
-      const tbaAddress = receipt.logs?.[0]?.topics?.[1] || `0x${Math.random().toString(16).substring(2, 42)}`
+      const tbaAddress =
+        receipt.logs?.[0]?.topics?.[1] ||
+        `0x${Math.random().toString(16).substring(2, 42)}`
 
       // 生成红包数据
       const newRedPacket: RedPacketData = {
@@ -805,7 +848,7 @@ function App() {
         timestamp: new Date().toLocaleTimeString('zh-CN'),
         type: createForm.type,
         txHash: txHash,
-        tbaAddress: tbaAddress
+        tbaAddress: tbaAddress,
       }
 
       console.log('🎉 红包创建成功:', newRedPacket)
@@ -857,7 +900,7 @@ function App() {
       // 如果是RPC错误，建议用户检查网络
       if (error.code && error.code < -32000) {
         console.log('💡 建议：检查网络连接，确认RPC节点正常工作')
-        setWalletError(prev => prev + ' (建议检查网络连接)')
+        setWalletError((prev) => prev + ' (建议检查网络连接)')
       }
     } finally {
       setIsCreating(false)
@@ -1069,7 +1112,7 @@ function App() {
               <div className='red-packet-icon'>🎁</div>
             </div>
 
-            <h1 className='title gradient-text'>MONAD 红包</h1>
+            <h1 className='title gradient-text'>MONAD </h1>
 
             <p className='subtitle'>CREATE OR CLAIM RED PACKETS</p>
 
@@ -1343,7 +1386,7 @@ function App() {
               <div className='red-packet-icon'>🎁</div>
             </div>
 
-            <h1 className='title gradient-text'>MONAD 红包</h1>
+            <h1 className='title gradient-text'>MONAD </h1>
 
             <p className='subtitle'>WEB3 LUCKY MONEY AWAITS</p>
 
@@ -1491,7 +1534,8 @@ function App() {
                       <span
                         className='value'
                         style={{ fontSize: '0.7rem' }}>
-                        {redPacket.txHash.slice(0, 10)}...{redPacket.txHash.slice(-8)}
+                        {redPacket.txHash.slice(0, 10)}...
+                        {redPacket.txHash.slice(-8)}
                       </span>
                     </div>
                   )}
@@ -1501,7 +1545,8 @@ function App() {
                       <span
                         className='value'
                         style={{ fontSize: '0.7rem' }}>
-                        {redPacket.tbaAddress.slice(0, 10)}...{redPacket.tbaAddress.slice(-8)}
+                        {redPacket.tbaAddress.slice(0, 10)}...
+                        {redPacket.tbaAddress.slice(-8)}
                       </span>
                     </div>
                   )}
