@@ -9,6 +9,7 @@ import "../src/MonaPacketAccount.sol";
 import "../src/ERC6551Registry.sol";
 import "../src/interface/IMonaPacketAccount.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 
 contract MonaPacketTest is Test {
     //==============================================================
@@ -27,6 +28,9 @@ contract MonaPacketTest is Test {
     uint256 public constant STARTING_ERC20_BALANCE = 1_000_000 ether;
     uint256 public constant PACKET_AMOUNT_ERC20 = 1_000 ether;
     uint256 public constant PACKET_AMOUNT_NATIVE = 1 ether;
+
+    // Mirror event from MonaPacket for expectEmit
+    event AccountImplementationUpdated(address indexed newImplementation);
 
     function setUp() public {
         nft = new MonaPacketNFT();
@@ -233,6 +237,66 @@ contract MonaPacketTest is Test {
         monaPacket.createWithERC20(recipient, address(mockERC20), 0);
     }
 
+    function test_Fail_CreateWithERC20_InvalidRecipient() public {
+        vm.prank(sender);
+        mockERC20.approve(address(monaPacket), 1);
+        vm.prank(sender);
+        vm.expectRevert(MonaPacket.MonaPacket__InvalidRecipient.selector);
+        monaPacket.createWithERC20(address(0), address(mockERC20), 1);
+    }
+
+    function test_Fail_CreateWithNativeToken_ZeroAmount() public {
+        vm.prank(sender);
+        vm.expectRevert(MonaPacket.MonaPacket__InvalidAmount.selector);
+        monaPacket.createWithNativeToken{value: 0}(recipient);
+    }
+
+    function test_Fail_CreateWithNativeToken_InvalidRecipient() public {
+        vm.prank(sender);
+        vm.expectRevert(MonaPacket.MonaPacket__InvalidRecipient.selector);
+        monaPacket.createWithNativeToken{value: PACKET_AMOUNT_NATIVE}(address(0));
+    }
+
+    function test_Fail_CreateWithERC20_TransferFailed() public {
+        MockFailERC20 bad = new MockFailERC20();
+        vm.prank(sender);
+        bad.approve(address(monaPacket), 100);
+        vm.prank(sender);
+        vm.expectRevert(MonaPacket.MonaPacket__TransferFailed.selector);
+        monaPacket.createWithERC20(recipient, address(bad), 100);
+    }
+
+    function test_CreateWithERC20Permit() public {
+        MockPermitToken token = new MockPermitToken();
+        token.mint(sender, 100);
+        vm.prank(sender);
+        address tba = monaPacket.createWithERC20Permit(
+            recipient,
+            address(token),
+            100,
+            type(uint256).max,
+            0,
+            bytes32(0),
+            bytes32(0)
+        );
+        assertEq(token.balanceOf(tba), 100);
+    }
+
+    function test_GetAccount_PredictsCreatedAddress() public {
+        vm.prank(sender);
+        mockERC20.approve(address(monaPacket), 1);
+        vm.prank(sender);
+        address tba = monaPacket.createWithERC20(recipient, address(mockERC20), 1);
+        assertEq(monaPacket.getAccount(0), tba);
+    }
+
+    function test_Event_AccountImplementationUpdated() public {
+        address newImpl = address(0x123);
+        vm.expectEmit(true, false, false, true, address(monaPacket));
+        emit AccountImplementationUpdated(newImpl);
+        monaPacket.setAccountImplementation(newImpl);
+    }
+
     function test_Fail_MintFromNonOwner() public {
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -346,5 +410,39 @@ contract MockERC20 is IERC20 {
     function _approve(address owner, address spender, uint256 amount) internal {
         _allowances[owner][spender] = amount;
         emit Approval(owner, spender, amount);
+    }
+}
+
+// ERC20 that always fails transferFrom to trigger MonaPacket__TransferFailed
+contract MockFailERC20 is IERC20 {
+    mapping(address => mapping(address => uint256)) private _allowances;
+    string public name = "MockFail Token";
+    string public symbol = "MF";
+    uint8 public decimals = 18;
+
+    function totalSupply() external pure returns (uint256) { return 0; }
+    function balanceOf(address) external pure returns (uint256) { return 0; }
+    function transfer(address, uint256) external pure returns (bool) { return true; }
+    function allowance(address owner, address spender) external view returns (uint256) { return _allowances[owner][spender]; }
+    function approve(address spender, uint256 amount) external returns (bool) { _allowances[msg.sender][spender] = amount; emit Approval(msg.sender, spender, amount); return true; }
+    function transferFrom(address, address, uint256) external pure returns (bool) { return false; }
+}
+
+// Minimal ERC20 + Permit used to cover createWithERC20Permit path
+contract MockPermitToken is MockERC20, IERC20Permit {
+    mapping(address => uint256) public nonces;
+    bytes32 public constant DOMAIN_SEPARATOR = bytes32(uint256(0x01));
+
+    function permit(
+        address owner,
+        address spender,
+        uint256 value,
+        uint256 /* deadline */,
+        uint8 /* v */,
+        bytes32 /* r */,
+        bytes32 /* s */
+    ) external {
+        nonces[owner] += 1;
+        _approve(owner, spender, value);
     }
 }

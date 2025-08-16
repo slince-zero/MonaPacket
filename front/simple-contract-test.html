@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monad 红包 - 简化测试</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #0a0a0a;
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #000000;
+            border: 4px solid #ffffff;
+            box-shadow: 8px 8px 0px #01DB83;
+            padding: 40px;
+        }
+
+        .title {
+            font-size: 2.5rem;
+            font-weight: 900;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #FFD641;
+            text-shadow: 4px 4px 0px #000000;
+            text-align: center;
+        }
+
+        .section {
+            background: #ffffff;
+            border: 3px solid #000000;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 4px 4px 0px #01DB83;
+        }
+
+        .section h3 {
+            color: #000000;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            color: #000000;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 3px solid #000000;
+            background: #ffffff;
+            color: #000000;
+            font-weight: 700;
+            font-size: 1rem;
+            font-family: 'Courier New', monospace;
+            box-shadow: 2px 2px 0px #000000;
+        }
+
+        .button {
+            background: #FFD641;
+            color: #000000;
+            border: 4px solid #000000;
+            padding: 16px 32px;
+            font-size: 1.1rem;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 6px 6px 0px #01DB83;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-family: inherit;
+            width: 100%;
+            margin-bottom: 16px;
+        }
+
+        .button:hover {
+            transform: translate(-3px, -3px);
+            box-shadow: 9px 9px 0px #01DB83;
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: 6px 6px 0px #666666;
+        }
+
+        .button.secondary {
+            background: #01DB83;
+        }
+
+        .status {
+            padding: 16px;
+            margin: 16px 0;
+            border: 3px solid #000000;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 4px 4px 0px #000000;
+        }
+
+        .status.success {
+            background: #01DB83;
+            color: #000000;
+        }
+
+        .status.error {
+            background: #ff4444;
+            color: #ffffff;
+        }
+
+        .status.info {
+            background: #FFD641;
+            color: #000000;
+        }
+
+        .console-log {
+            background: #000000;
+            border: 2px solid #01DB83;
+            padding: 20px;
+            margin-top: 24px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: #01DB83;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .info-item:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.9rem;
+        }
+
+        .info-value {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            word-break: break-all;
+            text-align: right;
+            max-width: 60%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">MONAD RED PACKET</div>
+        
+        <!-- 合约信息 -->
+        <div class="section">
+            <h3>CONTRACT INFO</h3>
+            <div class="info-item">
+                <span class="info-label">ADDRESS:</span>
+                <span class="info-value">0xd89C5C99B854470a3ea68b533441898Dee74B681</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">NETWORK:</span>
+                <span class="info-value">Monad Testnet (5555)</span>
+            </div>
+        </div>
+
+        <!-- 钱包状态 -->
+        <div class="section">
+            <h3>WALLET STATUS</h3>
+            <div id="walletInfo">
+                <div class="info-item">
+                    <span class="info-label">STATUS:</span>
+                    <span class="info-value" id="walletStatus">Not Connected</span>
+                </div>
+                <div class="info-item hidden" id="addressInfo">
+                    <span class="info-label">ADDRESS:</span>
+                    <span class="info-value" id="walletAddress">-</span>
+                </div>
+                <div class="info-item hidden" id="networkInfo">
+                    <span class="info-label">NETWORK:</span>
+                    <span class="info-value" id="networkName">-</span>
+                </div>
+                <div class="info-item hidden" id="balanceInfo">
+                    <span class="info-label">BALANCE:</span>
+                    <span class="info-value" id="walletBalance">-</span>
+                </div>
+            </div>
+            
+            <button id="connectBtn" class="button">CONNECT WALLET</button>
+            <button id="disconnectBtn" class="button secondary hidden">DISCONNECT</button>
+        </div>
+
+        <!-- 创建红包 -->
+        <div class="section">
+            <h3>CREATE RED PACKET</h3>
+            
+            <div class="form-group">
+                <label class="form-label">RECIPIENT ADDRESS</label>
+                <input type="text" id="recipient" class="form-input" 
+                       placeholder="0x742d35Cc6634C0532925a3b8D..." 
+                       value="0x742d35Cc6634C0532925a3b8D123456789ABCDEF0">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">AMOUNT (MON)</label>
+                <input type="number" id="amount" class="form-input" 
+                       value="0.001" min="0.001" step="0.001">
+            </div>
+            
+            <button id="createBtn" class="button" disabled>CREATE RED PACKET</button>
+        </div>
+
+        <!-- 状态显示 -->
+        <div id="statusMessage" class="status hidden"></div>
+
+        <!-- 结果显示 -->
+        <div class="section hidden" id="resultSection">
+            <h3>TRANSACTION RESULT</h3>
+            <div class="info-item">
+                <span class="info-label">TX HASH:</span>
+                <span class="info-value" id="txHash">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">STATUS:</span>
+                <span class="info-value" id="txStatus">-</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">BLOCK:</span>
+                <span class="info-value" id="blockNumber">-</span>
+            </div>
+        </div>
+
+        <!-- 控制台日志 -->
+        <div class="console-log">
+            <div style="color: #FFD641; font-weight: bold; margin-bottom: 12px;">CONSOLE LOG:</div>
+            <div id="logContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        // 配置
+        const CONTRACT_ADDRESS = '0xd89C5C99B854470a3ea68b533441898Dee74B681';
+        const MONAD_CHAIN_ID = '0x15B3'; // 5555 in hex
+
+        let walletConnected = false;
+        let userAddress = '';
+        let currentChainId = '';
+
+        // 日志函数
+        function addLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+            console.log(message);
+        }
+
+        // 显示状态消息
+        function showStatus(message, type = 'info') {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = `status ${type}`;
+            statusElement.classList.remove('hidden');
+        }
+
+        // 隐藏状态消息
+        function hideStatus() {
+            document.getElementById('statusMessage').classList.add('hidden');
+        }
+
+        // 更新钱包UI
+        function updateWalletUI() {
+            const statusElement = document.getElementById('walletStatus');
+            const addressElement = document.getElementById('walletAddress');
+            const networkElement = document.getElementById('networkName');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const createBtn = document.getElementById('createBtn');
+
+            if (walletConnected) {
+                statusElement.textContent = 'Connected';
+                addressElement.textContent = `${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`;
+                networkElement.textContent = currentChainId === MONAD_CHAIN_ID ? 'Monad Testnet' : 'Wrong Network';
+                
+                document.getElementById('addressInfo').classList.remove('hidden');
+                document.getElementById('networkInfo').classList.remove('hidden');
+                document.getElementById('balanceInfo').classList.remove('hidden');
+                
+                connectBtn.classList.add('hidden');
+                disconnectBtn.classList.remove('hidden');
+                createBtn.disabled = currentChainId !== MONAD_CHAIN_ID;
+            } else {
+                statusElement.textContent = 'Not Connected';
+                document.getElementById('addressInfo').classList.add('hidden');
+                document.getElementById('networkInfo').classList.add('hidden');
+                document.getElementById('balanceInfo').classList.add('hidden');
+                
+                connectBtn.classList.remove('hidden');
+                disconnectBtn.classList.add('hidden');
+                createBtn.disabled = true;
+            }
+        }
+
+        // 连接钱包
+        async function connectWallet() {
+            addLog('🔗 开始连接钱包...');
+            
+            if (typeof window.ethereum === 'undefined') {
+                addLog('❌ 未检测到MetaMask');
+                showStatus('请安装MetaMask钱包', 'error');
+                return;
+            }
+
+            try {
+                // 请求账户访问
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts',
+                });
+
+                if (accounts.length > 0) {
+                    userAddress = accounts[0];
+                    walletConnected = true;
+                    
+                    // 获取当前网络
+                    currentChainId = await window.ethereum.request({ 
+                        method: 'eth_chainId' 
+                    });
+                    
+                    addLog(`✅ 钱包连接成功: ${userAddress}`);
+                    addLog(`🌐 当前网络: ${currentChainId}`);
+                    
+                    // 获取余额
+                    try {
+                        const balance = await window.ethereum.request({
+                            method: 'eth_getBalance',
+                            params: [userAddress, 'latest']
+                        });
+                        const balanceInEth = (parseInt(balance, 16) / Math.pow(10, 18)).toFixed(4);
+                        document.getElementById('walletBalance').textContent = `${balanceInEth} MON`;
+                        addLog(`💰 余额: ${balanceInEth} MON`);
+                    } catch (balanceError) {
+                        addLog(`⚠️ 获取余额失败: ${balanceError.message}`);
+                    }
+                    
+                    updateWalletUI();
+                    showStatus('钱包连接成功！', 'success');
+                    
+                    if (currentChainId !== MONAD_CHAIN_ID) {
+                        showStatus('请切换到Monad测试网', 'error');
+                    }
+                }
+            } catch (error) {
+                addLog(`❌ 连接钱包失败: ${error.message}`);
+                showStatus(`连接失败: ${error.message}`, 'error');
+            }
+        }
+
+        // 断开钱包
+        function disconnectWallet() {
+            walletConnected = false;
+            userAddress = '';
+            currentChainId = '';
+            updateWalletUI();
+            hideStatus();
+            addLog('🔌 钱包已断开连接');
+        }
+
+        // 创建红包（简化版本）
+        async function createRedPacket() {
+            addLog('🎁 开始创建红包...');
+            
+            if (!walletConnected) {
+                showStatus('请先连接钱包', 'error');
+                return;
+            }
+
+            if (currentChainId !== MONAD_CHAIN_ID) {
+                showStatus('请切换到Monad测试网', 'error');
+                return;
+            }
+
+            const recipient = document.getElementById('recipient').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+
+            // 验证输入
+            if (!recipient || recipient.length !== 42) {
+                showStatus('请输入有效的接收者地址', 'error');
+                return;
+            }
+
+            if (amount <= 0) {
+                showStatus('请输入有效的金额', 'error');
+                return;
+            }
+
+            const createBtn = document.getElementById('createBtn');
+            createBtn.textContent = 'CREATING...';
+            createBtn.disabled = true;
+            hideStatus();
+
+            try {
+                addLog(`📝 接收者: ${recipient}`);
+                addLog(`📝 金额: ${amount} MON`);
+                
+                // 简化的交易参数（只发送原生代币，不调用合约）
+                const amountInWei = BigInt(Math.floor(amount * Math.pow(10, 18)));
+                
+                addLog(`📝 金额(Wei): ${amountInWei.toString()}`);
+                
+                const txParams = {
+                    to: recipient, // 直接发送给接收者，而不是合约
+                    from: userAddress,
+                    value: '0x' + amountInWei.toString(16),
+                    gas: '0x5208' // 21000 gas for simple transfer
+                };
+                
+                addLog('📝 发送简化交易...');
+                console.log('交易参数:', txParams);
+                
+                const txHash = await window.ethereum.request({
+                    method: 'eth_sendTransaction',
+                    params: [txParams]
+                });
+
+                addLog(`📝 交易已发送: ${txHash}`);
+                showStatus('交易已发送，等待确认...', 'info');
+                
+                // 显示结果
+                document.getElementById('txHash').textContent = txHash;
+                document.getElementById('txStatus').textContent = 'Pending';
+                document.getElementById('blockNumber').textContent = 'Waiting...';
+                document.getElementById('resultSection').classList.remove('hidden');
+                
+                // 等待交易确认
+                let attempts = 0;
+                const maxAttempts = 30;
+                
+                const checkReceipt = async () => {
+                    try {
+                        const receipt = await window.ethereum.request({
+                            method: 'eth_getTransactionReceipt',
+                            params: [txHash]
+                        });
+                        
+                        if (receipt) {
+                            addLog(`✅ 交易确认成功: ${receipt.blockNumber}`);
+                            document.getElementById('txStatus').textContent = receipt.status === '0x1' ? 'Success' : 'Failed';
+                            document.getElementById('blockNumber').textContent = parseInt(receipt.blockNumber, 16);
+                            showStatus('交易确认成功！', 'success');
+                        } else {
+                            attempts++;
+                            if (attempts < maxAttempts) {
+                                addLog(`⏳ 等待确认... (${attempts}/${maxAttempts})`);
+                                setTimeout(checkReceipt, 2000);
+                            } else {
+                                addLog('⏰ 确认超时，请手动查看交易状态');
+                                showStatus('确认超时，请查看钱包', 'error');
+                            }
+                        }
+                    } catch (error) {
+                        addLog(`❌ 查询交易状态失败: ${error.message}`);
+                        attempts++;
+                        if (attempts < maxAttempts) {
+                            setTimeout(checkReceipt, 2000);
+                        }
+                    }
+                };
+                
+                setTimeout(checkReceipt, 2000);
+
+            } catch (error) {
+                addLog(`❌ 创建红包失败: ${error.message}`);
+                console.error('详细错误:', error);
+                
+                if (error.code === 4001) {
+                    showStatus('用户取消了交易', 'error');
+                } else if (error.code === -32603) {
+                    showStatus('内部JSON-RPC错误，请检查网络连接', 'error');
+                } else if (error.message.includes('insufficient funds')) {
+                    showStatus('余额不足', 'error');
+                } else {
+                    showStatus(`创建失败: ${error.message}`, 'error');
+                }
+            } finally {
+                createBtn.textContent = 'CREATE RED PACKET';
+                createBtn.disabled = !walletConnected || currentChainId !== MONAD_CHAIN_ID;
+            }
+        }
+
+        // 监听账户变化
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    disconnectWallet();
+                } else if (accounts[0] !== userAddress) {
+                    userAddress = accounts[0];
+                    addLog(`🔄 账户已切换: ${userAddress}`);
+                    updateWalletUI();
+                }
+            });
+
+            window.ethereum.on('chainChanged', (chainId) => {
+                currentChainId = chainId;
+                addLog(`🔄 网络已切换: ${chainId}`);
+                updateWalletUI();
+                
+                if (chainId === MONAD_CHAIN_ID) {
+                    showStatus('已切换到Monad测试网', 'success');
+                } else {
+                    showStatus('请切换到Monad测试网', 'error');
+                }
+            });
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('🚀 页面加载完成');
+            addLog(`📝 合约地址: ${CONTRACT_ADDRESS}`);
+            addLog(`📝 目标网络: Monad Testnet (${MONAD_CHAIN_ID})`);
+            
+            // 绑定事件
+            document.getElementById('connectBtn').addEventListener('click', connectWallet);
+            document.getElementById('disconnectBtn').addEventListener('click', disconnectWallet);
+            document.getElementById('createBtn').addEventListener('click', createRedPacket);
+            
+            updateWalletUI();
+            addLog('✅ 简化测试页面初始化完成');
+        });
+    </script>
+</body>
+</html>
