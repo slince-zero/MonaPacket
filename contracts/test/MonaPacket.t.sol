@@ -10,6 +10,8 @@ import "../src/ERC6551Registry.sol";
 import "../src/interface/IMonaPacketAccount.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 
 contract MonaPacketTest is Test {
     //==============================================================
@@ -25,6 +27,8 @@ contract MonaPacketTest is Test {
     address public sender = address(0x1);
     address public recipient = address(0x2);
     address public attacker = address(0xDEADBEEF);
+    string public constant TEST_URI = "ipfs://test-uri";
+
     uint256 public constant STARTING_ERC20_BALANCE = 1_000_000 ether;
     uint256 public constant PACKET_AMOUNT_ERC20 = 1_000 ether;
     uint256 public constant PACKET_AMOUNT_NATIVE = 1 ether;
@@ -33,6 +37,7 @@ contract MonaPacketTest is Test {
     event AccountImplementationUpdated(address indexed newImplementation);
 
     function setUp() public {
+        // Deploy all contracts
         nft = new MonaPacketNFT();
         implementation = new MonaPacketAccount();
         registry = new ERC6551Registry();
@@ -43,7 +48,10 @@ contract MonaPacketTest is Test {
         );
         mockERC20 = new MockERC20();
 
+        // Transfer NFT ownership to the main contract
         nft.transferOwnership(address(monaPacket));
+
+        // Fund actors
         mockERC20.mint(sender, STARTING_ERC20_BALANCE);
         vm.deal(sender, 10 ether); // Give sender some native tokens
     }
@@ -55,14 +63,27 @@ contract MonaPacketTest is Test {
     function test_CreateWithERC20() public {
         vm.prank(sender);
         mockERC20.approve(address(monaPacket), PACKET_AMOUNT_ERC20);
+
         vm.prank(sender);
         address tba = monaPacket.createWithERC20(
             recipient,
             address(mockERC20),
-            PACKET_AMOUNT_ERC20
+            PACKET_AMOUNT_ERC20,
+            TEST_URI
         );
-        assertEq(nft.ownerOf(0), recipient);
-        assertEq(mockERC20.balanceOf(tba), PACKET_AMOUNT_ERC20);
+
+        assertEq(nft.ownerOf(0), recipient, "Recipient should own the NFT");
+        assertEq(
+            mockERC20.balanceOf(tba),
+            PACKET_AMOUNT_ERC20,
+            "TBA should hold the ERC20 tokens"
+        );
+        assertEq(
+            nft.tokenURI(0),
+            TEST_URI,
+            "Token URI should be set correctly"
+        );
+
         assertEq(
             mockERC20.balanceOf(sender),
             STARTING_ERC20_BALANCE - PACKET_AMOUNT_ERC20
@@ -73,9 +94,18 @@ contract MonaPacketTest is Test {
         vm.prank(sender);
         address tba = monaPacket.createWithNativeToken{
             value: PACKET_AMOUNT_NATIVE
-        }(recipient);
-        assertEq(nft.ownerOf(0), recipient);
-        assertEq(tba.balance, PACKET_AMOUNT_NATIVE);
+        }(recipient, TEST_URI);
+        assertEq(nft.ownerOf(0), recipient, "Recipient should own the NFT");
+        assertEq(
+            tba.balance,
+            PACKET_AMOUNT_NATIVE,
+            "TBA should hold the native tokens"
+        );
+        assertEq(
+            nft.tokenURI(0),
+            TEST_URI,
+            "Token URI should be set correctly"
+        );
     }
 
     function test_ClaimERC20Packet() public {
@@ -131,7 +161,8 @@ contract MonaPacketTest is Test {
         address tba = monaPacket.createWithERC20(
             recipient,
             address(mockERC20),
-            PACKET_AMOUNT_ERC20
+            PACKET_AMOUNT_ERC20,
+            TEST_URI
         );
 
         // Assert: Get all the recorded logs
@@ -221,7 +252,8 @@ contract MonaPacketTest is Test {
         address tba = monaPacket.createWithERC20(
             recipient,
             address(mockERC20),
-            _amount
+            _amount,
+            TEST_URI
         );
 
         assertEq(mockERC20.balanceOf(tba), _amount);
@@ -234,7 +266,7 @@ contract MonaPacketTest is Test {
     function test_Fail_CreateWithZeroAmount() public {
         vm.prank(sender);
         vm.expectRevert(MonaPacket.MonaPacket__InvalidAmount.selector);
-        monaPacket.createWithERC20(recipient, address(mockERC20), 0);
+        monaPacket.createWithERC20(recipient, address(mockERC20), 0, TEST_URI);
     }
 
     function test_Fail_CreateWithERC20_InvalidRecipient() public {
@@ -242,51 +274,113 @@ contract MonaPacketTest is Test {
         mockERC20.approve(address(monaPacket), 1);
         vm.prank(sender);
         vm.expectRevert(MonaPacket.MonaPacket__InvalidRecipient.selector);
-        monaPacket.createWithERC20(address(0), address(mockERC20), 1);
+        monaPacket.createWithERC20(address(0), address(mockERC20), 1, TEST_URI);
     }
 
     function test_Fail_CreateWithNativeToken_ZeroAmount() public {
         vm.prank(sender);
         vm.expectRevert(MonaPacket.MonaPacket__InvalidAmount.selector);
-        monaPacket.createWithNativeToken{value: 0}(recipient);
+        monaPacket.createWithNativeToken{value: 0}(recipient, TEST_URI);
     }
 
     function test_Fail_CreateWithNativeToken_InvalidRecipient() public {
         vm.prank(sender);
         vm.expectRevert(MonaPacket.MonaPacket__InvalidRecipient.selector);
-        monaPacket.createWithNativeToken{value: PACKET_AMOUNT_NATIVE}(address(0));
+        monaPacket.createWithNativeToken{value: PACKET_AMOUNT_NATIVE}(
+            address(0),
+            TEST_URI
+        );
     }
 
+    //==============================================================
+    // Revert Tests
+    //==============================================================
+
     function test_Fail_CreateWithERC20_TransferFailed() public {
-        MockFailERC20 bad = new MockFailERC20();
+        MockFailERC20 badToken = new MockFailERC20();
         vm.prank(sender);
-        bad.approve(address(monaPacket), 100);
+        badToken.approve(address(monaPacket), 100);
+
         vm.prank(sender);
         vm.expectRevert(MonaPacket.MonaPacket__TransferFailed.selector);
-        monaPacket.createWithERC20(recipient, address(bad), 100);
+        monaPacket.createWithERC20(recipient, address(badToken), 100, TEST_URI);
     }
 
     function test_CreateWithERC20Permit() public {
-        MockPermitToken token = new MockPermitToken();
-        token.mint(sender, 100);
+        MockPermitToken permitToken = new MockPermitToken();
+        permitToken.mint(sender, PACKET_AMOUNT_ERC20);
+        // In a real scenario, v, r, s would be generated by a wallet signature.
+        // For testing, we can use dummy values because our mock permit function doesn't validate the signature.
+        (uint8 v, bytes32 r, bytes32 s) = (
+            27,
+            bytes32(uint256(1)),
+            bytes32(uint256(2))
+        );
+
         vm.prank(sender);
         address tba = monaPacket.createWithERC20Permit(
             recipient,
-            address(token),
-            100,
-            type(uint256).max,
-            0,
-            bytes32(0),
-            bytes32(0)
+            address(permitToken),
+            PACKET_AMOUNT_ERC20,
+            TEST_URI,
+            block.timestamp,
+            v,
+            r,
+            s
         );
-        assertEq(token.balanceOf(tba), 100);
+
+        assertEq(permitToken.balanceOf(tba), PACKET_AMOUNT_ERC20);
+        assertEq(nft.ownerOf(0), recipient);
+    }
+
+    function test_RecipientCanBurnPacket() public {
+        // Create a packet first
+        vm.prank(sender);
+        monaPacket.createWithNativeToken{value: 1}(recipient, TEST_URI);
+        assertEq(nft.ownerOf(0), recipient);
+
+        // Recipient burns the NFT
+        vm.prank(recipient);
+        nft.burn(0);
+
+        // Assert the NFT no longer exists
+        bytes4 expectedError = bytes4(
+            keccak256("ERC721NonexistentToken(uint256)")
+        );
+        vm.expectRevert(abi.encodeWithSelector(expectedError, 0));
+        nft.ownerOf(0);
+    }
+
+    function test_Pausable() public {
+        // Owner can pause
+        monaPacket.pauseNFTs();
+        assertTrue(nft.paused());
+
+        // Minting should fail when paused
+        vm.prank(sender); // To simulate call from monaPacket
+        vm.expectRevert(Pausable.EnforcedPause.selector);
+        monaPacket.createWithNativeToken{value: 1}(recipient, TEST_URI);
+
+        // Owner can unpause
+        monaPacket.unpauseNFTs();
+        assertFalse(nft.paused());
+
+        // Minting should succeed now
+        vm.prank(sender);
+        monaPacket.createWithNativeToken{value: 1}(recipient, TEST_URI);
+        assertEq(nft.ownerOf(0), recipient);
     }
 
     function test_GetAccount_PredictsCreatedAddress() public {
         vm.prank(sender);
         mockERC20.approve(address(monaPacket), 1);
         vm.prank(sender);
-        address tba = monaPacket.createWithERC20(recipient, address(mockERC20), 1);
+        address tba = monaPacket.createWithERC20(
+            recipient,
+            address(mockERC20),
+            1,
+            TEST_URI
+        );
         assertEq(monaPacket.getAccount(0), tba);
     }
 
@@ -305,7 +399,7 @@ contract MonaPacketTest is Test {
             )
         );
         vm.prank(attacker);
-        nft.mint(recipient);
+        nft.mint(recipient, TEST_URI);
     }
 
     function test_Fail_ClaimFromWrongOwner() public {
@@ -420,12 +514,38 @@ contract MockFailERC20 is IERC20 {
     string public symbol = "MF";
     uint8 public decimals = 18;
 
-    function totalSupply() external pure returns (uint256) { return 0; }
-    function balanceOf(address) external pure returns (uint256) { return 0; }
-    function transfer(address, uint256) external pure returns (bool) { return true; }
-    function allowance(address owner, address spender) external view returns (uint256) { return _allowances[owner][spender]; }
-    function approve(address spender, uint256 amount) external returns (bool) { _allowances[msg.sender][spender] = amount; emit Approval(msg.sender, spender, amount); return true; }
-    function transferFrom(address, address, uint256) external pure returns (bool) { return false; }
+    function totalSupply() external pure returns (uint256) {
+        return 0;
+    }
+
+    function balanceOf(address) external pure returns (uint256) {
+        return 0;
+    }
+
+    function transfer(address, uint256) external pure returns (bool) {
+        return true;
+    }
+
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256) {
+        return _allowances[owner][spender];
+    }
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        _allowances[msg.sender][spender] = amount;
+        emit Approval(msg.sender, spender, amount);
+        return true;
+    }
+
+    function transferFrom(
+        address,
+        address,
+        uint256
+    ) external pure returns (bool) {
+        return false;
+    }
 }
 
 // Minimal ERC20 + Permit used to cover createWithERC20Permit path

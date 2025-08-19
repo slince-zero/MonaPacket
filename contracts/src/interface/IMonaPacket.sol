@@ -43,7 +43,8 @@ interface IMonaPacket {
      * @return tba The address of the newly created and funded Token-Bound Account.
      */
     function createWithNativeToken(
-        address _recipient
+        address _recipient,
+        string memory _uri
     ) external payable returns (address tba);
 
     /**
@@ -56,7 +57,8 @@ interface IMonaPacket {
     function createWithERC20(
         address _recipient,
         address _erc20,
-        uint256 _amount
+        uint256 _amount,
+        string memory _uri
     ) external returns (address tba);
 
     /**
@@ -66,6 +68,7 @@ interface IMonaPacket {
         address _recipient,
         address _erc20,
         uint256 _amount,
+        string memory _uri,
         uint256 _deadline,
         uint8 _v,
         bytes32 _r,

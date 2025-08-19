@@ -81,14 +81,15 @@ contract MonaPacket is Ownable {
      * @return tba The address of the newly created and funded Token-Bound Account.
      */
     function createWithNativeToken(
-        address _recipient
+        address _recipient,
+        string memory _uri
     ) external payable returns (address tba) {
         if (msg.value == 0) revert MonaPacket__InvalidAmount();
         if (_recipient == address(0)) revert MonaPacket__InvalidRecipient();
 
         // 1. Create the empty packet (NFT + TBA)
         uint256 tokenId;
-        (tba, tokenId) = _createPacket(_recipient);
+        (tba, tokenId) = _createPacket(_recipient, _uri);
 
         // 2. Fund the TBA with the native token
         (bool success, ) = tba.call{value: msg.value}("");
@@ -108,13 +109,14 @@ contract MonaPacket is Ownable {
     function createWithERC20(
         address _recipient,
         address _erc20,
-        uint256 _amount
+        uint256 _amount,
+        string memory _uri
     ) public returns (address tba) {
         if (_amount == 0) revert MonaPacket__InvalidAmount();
 
         // 1. Create the empty packet (NFT + TBA)
         uint256 tokenId;
-        (tba, tokenId) = _createPacket(_recipient);
+        (tba, tokenId) = _createPacket(_recipient, _uri);
 
         // 2. Fund the TBA by pulling ERC20 tokens from the caller
         bool success = IERC20(_erc20).transferFrom(msg.sender, tba, _amount);
@@ -131,6 +133,7 @@ contract MonaPacket is Ownable {
         address _recipient,
         address _erc20,
         uint256 _amount,
+        string memory _uri,
         uint256 _deadline,
         uint8 _v,
         bytes32 _r,
@@ -148,7 +151,7 @@ contract MonaPacket is Ownable {
         );
 
         // 2. Call the main createWithERC20 function
-        tba = createWithERC20(_recipient, _erc20, _amount);
+        tba = createWithERC20(_recipient, _erc20, _amount, _uri);
     }
 
     //==============================================================
@@ -159,12 +162,13 @@ contract MonaPacket is Ownable {
      * @dev Internal helper function to handle the creation of the NFT and its TBA.
      */
     function _createPacket(
-        address _recipient
+        address _recipient,
+        string memory _uri
     ) private returns (address tba, uint256 tokenId) {
         if (_recipient == address(0)) revert MonaPacket__InvalidRecipient();
 
         // 1. Mint a new MonaPacketNFT to the recipient
-        tokenId = nftContract.mint(_recipient);
+        tokenId = nftContract.mint(_recipient, _uri);
 
         // 2. Create the associated Token-Bound Account using the ERC6551 Registry
         tba = registry.createAccount(
@@ -209,5 +213,23 @@ contract MonaPacket is Ownable {
     ) external onlyOwner {
         accountImplementation = _newImplementation;
         emit AccountImplementationUpdated(_newImplementation);
+    }
+
+    // 将这两个函数添加到 MonaPacket.sol 的 "Admin Functions" 部分
+
+    /**
+     * @notice Pauses all transfers and minting on the NFT contract.
+     * @dev Only the owner of this contract can call this.
+     */
+    function pauseNFTs() external onlyOwner {
+        nftContract.pause();
+    }
+
+    /**
+     * @notice Unpauses all transfers and minting on the NFT contract.
+     * @dev Only the owner of this contract can call this.
+     */
+    function unpauseNFTs() external onlyOwner {
+        nftContract.unpause();
     }
 }

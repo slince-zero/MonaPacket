@@ -1,8 +1,8 @@
 {
-  ".deployment.ERC6551Registry": "0xDa0D170675C5e539257d5780f1FE936A35CE4831",
-  ".deployment.MonaPacket": "0xd89C5C99B854470a3ea68b533441898Dee74B681",
-  ".deployment.MonaPacketAccount": "0xCA5c4527aCd62c68961c282FAc8ada4025F9FC8A",
-  ".deployment.MonaPacketNFT": "0xe5b7976772c273DFE642446049e4b45Bf0b1C00C",
+  ".deployment.ERC6551Registry": "0x735F1Ba389D9D350501dB8FBbB5b52477DcaddA8",
+  ".deployment.MonaPacket": "0x0eAFb60DD4F4b3863eb5490752238aC37A625dc6",
+  ".deployment.MonaPacketAccount": "0xb0F71e4a65baeF5ceC68184EFBDeD5e4FBaBF21B",
+  ".deployment.MonaPacketNFT": "0xcDD7064BD7e09f8a8d46A67b9C0AfC0Ca7b2c16c",
   ".deployment.chainId": 10143,
-  ".deployment.deployerAddress": "0x750Ea21c1e98CcED0d4557196B6f4a5974CCB6f5"
+  ".deployment.deployerAddress": "0x9C7BC14e8a4B054e98C6DB99B9f1Ea2797BAee7B"
 }

@@ -20,12 +20,17 @@ contract MonaPacketAccountTest is Test {
 
     address public sender = address(0x1);
     address public recipient = address(0x2);
+    string public constant TEST_URI = "ipfs://test-uri";
 
     function setUp() public {
         nft = new MonaPacketNFT();
         implementation = new MonaPacketAccount();
         registry = new ERC6551Registry();
-        monaPacket = new MonaPacket(address(nft), address(registry), address(implementation));
+        monaPacket = new MonaPacket(
+            address(nft),
+            address(registry),
+            address(implementation)
+        );
         mockERC20 = new MockERC20();
 
         nft.transferOwnership(address(monaPacket));
@@ -33,11 +38,18 @@ contract MonaPacketAccountTest is Test {
         vm.deal(sender, 10 ether);
     }
 
-    function _createPacketToRecipient(uint256 amount) internal returns (address tba) {
+    function _createPacketToRecipient(
+        uint256 amount
+    ) internal returns (address tba) {
         vm.prank(sender);
         mockERC20.approve(address(monaPacket), amount);
         vm.prank(sender);
-        tba = monaPacket.createWithERC20(recipient, address(mockERC20), amount);
+        tba = monaPacket.createWithERC20(
+            recipient,
+            address(mockERC20),
+            amount,
+            TEST_URI
+        );
     }
 
     function test_Fail_Execute_UnsupportedOperation() public {
@@ -55,9 +67,18 @@ contract MonaPacketAccountTest is Test {
 
         assertEq(IMonaPacketAccount(payable(tba)).state(), 0);
 
-        bytes memory data = abi.encodeWithSelector(IERC20.transfer.selector, recipient, 1);
+        bytes memory data = abi.encodeWithSelector(
+            IERC20.transfer.selector,
+            recipient,
+            1
+        );
         vm.prank(recipient);
-        IMonaPacketAccount(payable(tba)).execute(address(mockERC20), 0, data, 0);
+        IMonaPacketAccount(payable(tba)).execute(
+            address(mockERC20),
+            0,
+            data,
+            0
+        );
 
         assertEq(IMonaPacketAccount(payable(tba)).state(), 1);
     }
@@ -68,7 +89,9 @@ contract MonaPacketAccountTest is Test {
 
         assertTrue(IERC165(tba).supportsInterface(type(IERC165).interfaceId));
         assertTrue(IERC165(tba).supportsInterface(type(IERC1271).interfaceId));
-        assertTrue(IERC165(tba).supportsInterface(type(IMonaPacketAccount).interfaceId));
+        assertTrue(
+            IERC165(tba).supportsInterface(type(IMonaPacketAccount).interfaceId)
+        );
     }
 
     function test_Account_isValidSigner() public {
@@ -78,11 +101,17 @@ contract MonaPacketAccountTest is Test {
         vm.prank(sender);
         mockERC20.approve(address(monaPacket), 1);
         vm.prank(sender);
-        monaPacket.createWithERC20(r, address(mockERC20), 1);
+        monaPacket.createWithERC20(r, address(mockERC20), 1, TEST_URI);
         address tba = monaPacket.getAccount(0);
 
-        assertEq(IMonaPacketAccount(payable(tba)).isValidSigner(r, ""), IMonaPacketAccount.isValidSigner.selector);
-        assertEq(IMonaPacketAccount(payable(tba)).isValidSigner(recipient, ""), bytes4(0));
+        assertEq(
+            IMonaPacketAccount(payable(tba)).isValidSigner(r, ""),
+            IMonaPacketAccount.isValidSigner.selector
+        );
+        assertEq(
+            IMonaPacketAccount(payable(tba)).isValidSigner(recipient, ""),
+            bytes4(0)
+        );
     }
 
     function test_Account_isValidSignature_EOAOwner() public {
@@ -92,13 +121,16 @@ contract MonaPacketAccountTest is Test {
         vm.prank(sender);
         mockERC20.approve(address(monaPacket), 1);
         vm.prank(sender);
-        monaPacket.createWithERC20(r, address(mockERC20), 1);
+        monaPacket.createWithERC20(r, address(mockERC20), 1, TEST_URI);
         address tba = monaPacket.getAccount(0);
 
         bytes32 hash = keccak256("hello");
         (uint8 v, bytes32 sigR, bytes32 sigS) = vm.sign(pk, hash);
         bytes memory sig = abi.encodePacked(sigR, sigS, v);
-        assertEq(IERC1271(tba).isValidSignature(hash, sig), IERC1271.isValidSignature.selector);
+        assertEq(
+            IERC1271(tba).isValidSignature(hash, sig),
+            IERC1271.isValidSignature.selector
+        );
 
         (v, sigR, sigS) = vm.sign(0xCAFE, hash);
         sig = abi.encodePacked(sigR, sigS, v);
@@ -109,7 +141,11 @@ contract MonaPacketAccountTest is Test {
         _createPacketToRecipient(1);
         address tba = monaPacket.getAccount(0);
 
-        (uint256 cid, address tokenContract, uint256 tokenId) = IMonaPacketAccount(payable(tba)).token();
+        (
+            uint256 cid,
+            address tokenContract,
+            uint256 tokenId
+        ) = IMonaPacketAccount(payable(tba)).token();
         assertEq(cid, block.chainid);
         assertEq(tokenContract, address(nft));
         assertEq(tokenId, 0);
@@ -125,10 +161,19 @@ contract MonaPacketAccountTest is Test {
         _createPacketToRecipient(1);
         address tba = monaPacket.getAccount(0);
 
-        bytes memory data = abi.encodeWithSelector(IERC20.transfer.selector, recipient, 2);
+        bytes memory data = abi.encodeWithSelector(
+            IERC20.transfer.selector,
+            recipient,
+            2
+        );
         vm.prank(recipient);
         vm.expectRevert("ERC20: transfer amount exceeds balance");
-        IMonaPacketAccount(payable(tba)).execute(address(mockERC20), 0, data, 0);
+        IMonaPacketAccount(payable(tba)).execute(
+            address(mockERC20),
+            0,
+            data,
+            0
+        );
     }
 }
 
@@ -147,11 +192,25 @@ contract MockERC20 is IERC20 {
         emit Transfer(address(0), account, amount);
     }
 
-    function totalSupply() external view returns (uint256) { return _totalSupply; }
-    function balanceOf(address account) external view returns (uint256) { return _balances[account]; }
-    function allowance(address owner, address spender) external view returns (uint256) { return _allowances[owner][spender]; }
+    function totalSupply() external view returns (uint256) {
+        return _totalSupply;
+    }
 
-    function transfer(address recipient, uint256 amount) external returns (bool) {
+    function balanceOf(address account) external view returns (uint256) {
+        return _balances[account];
+    }
+
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256) {
+        return _allowances[owner][spender];
+    }
+
+    function transfer(
+        address recipient,
+        uint256 amount
+    ) external returns (bool) {
         _transfer(msg.sender, recipient, amount);
         return true;
     }
@@ -161,18 +220,36 @@ contract MockERC20 is IERC20 {
         return true;
     }
 
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool) {
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external returns (bool) {
         _transfer(sender, recipient, amount);
         uint256 currentAllowance = _allowances[sender][msg.sender];
-        require(currentAllowance >= amount, "ERC20: transfer amount exceeds allowance");
-        unchecked { _approve(sender, msg.sender, currentAllowance - amount); }
+        require(
+            currentAllowance >= amount,
+            "ERC20: transfer amount exceeds allowance"
+        );
+        unchecked {
+            _approve(sender, msg.sender, currentAllowance - amount);
+        }
         return true;
     }
 
-    function _transfer(address sender, address recipient, uint256 amount) internal {
+    function _transfer(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) internal {
         uint256 senderBalance = _balances[sender];
-        require(senderBalance >= amount, "ERC20: transfer amount exceeds balance");
-        unchecked { _balances[sender] = senderBalance - amount; }
+        require(
+            senderBalance >= amount,
+            "ERC20: transfer amount exceeds balance"
+        );
+        unchecked {
+            _balances[sender] = senderBalance - amount;
+        }
         _balances[recipient] += amount;
         emit Transfer(sender, recipient, amount);
     }
@@ -182,5 +259,3 @@ contract MockERC20 is IERC20 {
         emit Approval(owner, spender, amount);
     }
 }
-
-
